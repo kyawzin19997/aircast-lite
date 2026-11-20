@@ -1,0 +1,3921 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Optional same-origin endpoint returning {"iceServers":[...]} with session-length TURN credentials. -->
+<meta name="aircast-ice-endpoint" content="">
+<meta name="theme-color" content="#111314">
+<link rel="manifest" href="./aircast.webmanifest">
+<link rel="apple-touch-icon" href="./aircast-icon-192.png">
+<link rel="icon" type="image/png" href="./aircast-icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="description" content="AirCast Lite camera routing for OBS Studio">
+<title>AirCast Lite · Camera Studio</title>
+<script>
+  const query = new URLSearchParams(location.search);
+  const phoneLaunch = query.get('launch') === 'app' && matchMedia('(pointer: coarse)').matches;
+  document.documentElement.dataset.view = query.has('obs') || query.get('clean') === 'true'
+    ? 'output' : query.get('mode') === 'sender' || phoneLaunch ? 'phone' : 'studio';
+</script>
+<style>
+:root{color-scheme:dark;--bg:#111314;--panel:#191c1d;--well:#0d0f10;--lift:#222627;--line:#2c3132;--quiet:#a1a9a8;--text:#f2f4ef;--lime:#d6fa88;--mutedLime:#b5ce91;--red:#ff786f;--amber:#f3c47a;--radius:12px;--mono:Consolas,"SFMono-Regular",monospace;font:15px/1.45 "Segoe UI",system-ui,sans-serif;background:var(--bg);color:var(--text)}
+*{box-sizing:border-box}body{margin:0;min-width:280px}button,input,select{font:inherit}button,a,input,select{-webkit-tap-highlight-color:transparent}button{color:inherit;cursor:pointer}button:disabled{opacity:.43;cursor:default}button,a,input,select,summary{outline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--lime)}a{color:var(--lime);text-underline-offset:3px}[hidden]{display:none!important}svg{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle}h1,h2,h3,p{margin:0}h1{font-size:clamp(1.7rem,3vw,2.2rem);font-weight:650;letter-spacing:-.045em;line-height:1.12}h2{font-size:1rem;font-weight:650;letter-spacing:-.012em}h3{font-size:1.2rem;font-weight:650;letter-spacing:-.02em}.muted{color:var(--quiet)}.small{font-size:.86rem}.mono{font-family:var(--mono);font-size:.83rem}.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.spread,.group{display:flex;align-items:center;gap:9px;min-width:0}.spread{justify-content:space-between}.btn{display:inline-flex;justify-content:center;align-items:center;gap:8px;min-height:37px;padding:0 12px;border-radius:7px;border:1px solid var(--line);background:var(--lift);font-size:.89rem;font-weight:600;white-space:nowrap;text-decoration:none;color:var(--text)}.btn:hover:not(:disabled){border-color:#535a58;background:#2a3030}.btn.ghost{background:transparent}.btn.accent{background:var(--lime);color:#1a2112;border-color:var(--lime)}.btn.accent:hover:not(:disabled){background:#e3ffa4;border-color:#e3ffa4}.btn.danger{color:#ffada8}.btn.square{width:36px;min-width:36px;padding:0}.btn.tiny{min-height:30px;font-size:.8rem;padding:0 9px}.btn[aria-pressed=true]:not(.accent){border-color:#566840;color:var(--lime);background:#263021}.btn svg{width:16px;height:16px}.icon-muted{color:var(--quiet)}.header{background:#151718;border-bottom:1px solid var(--line)}.header-inner{min-height:62px;max-width:1560px;padding:0 34px;margin:auto;display:flex;align-items:center;justify-content:space-between;gap:12px}.brand{display:flex;align-items:center;gap:10px;font-size:1.08rem;font-weight:720;letter-spacing:-.035em;white-space:nowrap}.brand-mark{width:31px;height:31px;display:grid;place-items:center;background:var(--lime);border-radius:8px;color:#1a2112}.brand-mark svg{width:19px;height:19px}.brand em{font-size:.8rem;font-style:normal;font-weight:550;color:var(--quiet);letter-spacing:0;margin-left:2px}.room-btn{gap:8px}.room-btn .mono{color:var(--text)}.header .plain{color:var(--quiet);min-height:33px}.signal{display:inline-flex;align-items:center;gap:7px;color:var(--quiet);font-size:.8rem;white-space:nowrap}.dot{width:7px;height:7px;background:#65706e;border-radius:50%;flex:none}.signal[data-tone=good] .dot,.dot.active{background:var(--lime)}.signal[data-tone=warn] .dot,.dot.warn{background:var(--amber)}.signal[data-tone=bad] .dot,.dot.live{background:var(--red)}
+.workspace{max-width:1560px;margin:auto;padding:27px 34px 32px}.workspace-heading{margin-bottom:21px;gap:16px}.workspace-heading p{margin-top:7px;color:var(--quiet);font-size:.92rem}.segmented{display:inline-flex;align-items:center;gap:3px;border:1px solid var(--line);background:#141617;border-radius:9px;padding:3px;white-space:nowrap}.segmented button{border:1px solid transparent;border-radius:6px;background:transparent;color:var(--quiet);padding:6px 12px;font-weight:600;font-size:.88rem;min-height:35px}.segmented button:hover{color:var(--text)}.segmented button[aria-pressed=true]{border-color:#39413d;color:var(--text);background:#292e2d}.studio-grid{display:grid;grid-template-columns:minmax(0,2.13fr) minmax(305px,1fr);gap:17px;align-items:start}.stack{display:grid;gap:16px;min-width:0}.panel{min-width:0;border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);overflow:hidden}.panel-head{padding:11px 14px;min-height:51px}.panel-head>div{min-width:0}.panel-head h2{white-space:nowrap}.panel-head .title-icon{width:17px;height:17px;color:#b9c2be}.divider{width:1px;height:19px;background:var(--line);margin-inline:2px}.badge{display:inline-flex;align-items:center;gap:6px;padding:3px 7px;border:1px solid #343a38;border-radius:5px;white-space:nowrap;color:#b4bdba;font:.73rem/1.25 var(--mono)}.badge[data-live=true]{color:#ffc1bb;border-color:#653c38;background:#352322}.badge[data-live=true] .dot{background:var(--red)}
+.viewport{position:relative;display:grid;place-items:center;min-width:0;overflow:hidden;isolation:isolate;background:var(--well)}.viewport:fullscreen{width:100%;height:100%;max-height:none;aspect-ratio:auto}.program-stage{width:100%;aspect-ratio:16/9;max-height:clamp(310px,calc(100dvh - 570px),530px);border-block:1px solid var(--line);background-color:#0e1112;background-image:linear-gradient(90deg,#a6b7ac0a 1px,transparent 1px),linear-gradient(#a6b7ac0a 1px,transparent 1px),radial-gradient(ellipse at 50% 45%,#1b2020 0%,#0e1112 65%);background-size:32px 32px,32px 32px,100% 100%;background-position:center}.program-stage.has-media{background:#0b0d0e}.framing-guide{position:absolute;inset:9% 6%;pointer-events:none;color:#74827d55}.framing-guide b{position:absolute;width:22px;height:22px;border:1px solid currentColor}.framing-guide b:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}.framing-guide b:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}.framing-guide b:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}.framing-guide b:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}.viewport.has-media .framing-guide{display:none}.media-layer,.frame-turn{position:absolute;inset:0;pointer-events:none}.frame-turn{inset:auto;top:50%;left:50%;width:100%;height:100%;translate:-50% -50%;transform:rotate(var(--rotate,0deg))}.media-layer :is(video,img){display:block;width:100%;height:100%;object-fit:var(--fit,contain);transform:scale(var(--scale-x,1),var(--scale-y,1));filter:brightness(var(--brightness,1)) contrast(var(--contrast,1))}.empty{position:relative;display:grid;justify-items:center;text-align:center;gap:8px;padding:12px;z-index:1}.empty-icon{width:52px;height:52px;border:1px solid #3b4542;border-radius:11px;background:#252d2a;display:grid;place-items:center;color:#cad7ce}.empty-icon svg{width:24px;height:24px}.empty strong{font-size:1.07rem;font-weight:650;margin-top:4px}.empty p{color:var(--quiet);font-size:.89rem}.empty .btn{margin-top:6px}.empty .group{justify-content:center;flex-wrap:wrap;gap:6px}.output-bar{padding:11px 14px;min-height:62px}.output-icon{width:34px;height:34px;display:grid;place-items:center;border-radius:7px;background:#283225;color:var(--lime);border:1px solid #3b4b33;flex:none}.output-icon svg{width:16px;height:16px}.output-label{display:grid;gap:1px;min-width:0}.output-label strong{font-size:.88rem;font-weight:650}
+.multiview{padding-bottom:10px}.multi-grid{display:grid;grid-template-columns:repeat(var(--view-columns,var(--auto-columns,3)),minmax(0,1fr));gap:8px;padding:0 10px}.multi-grid:fullscreen{padding:12px;background:var(--bg);align-content:center;overflow:auto}.tile{min-width:0;padding:0;text-align:left;border:1px solid var(--line);background:#141617;border-radius:8px;overflow:hidden}.tile:hover{border-color:#5f6964}.tile[aria-current=true]{border-color:#93615b}.tile[aria-current=true] .keycap{color:#ffc1bb;border-color:#653c38}.tile-stage{aspect-ratio:16/8;background:repeating-linear-gradient(135deg,#141718 0 2px,#121516 2px 10px)}.tile-stage>svg{width:21px;height:21px;color:#63706b}.tile-stage.has-media{background:#0b0d0e}.tile-stage.has-media>svg{display:none}.tile-info{min-height:33px;padding:4px 8px;gap:5px;font-size:.84rem}.tile-info .group{gap:6px}.keycap{font: .73rem/1.2 var(--mono);min-width:21px;padding:2px 4px;border:1px solid #414845;border-bottom-width:2px;border-radius:4px;text-align:center;color:var(--quiet)}
+.source-list{display:grid;padding:0 10px 10px;gap:6px}.source-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:center;padding:6px;background:#151819;border:1px solid #282d2d;border-radius:8px;min-height:54px}.source-row.is-selected{background:#232923;border-color:#40513a}.source-select{display:flex;align-items:center;gap:9px;border:0;background:none;padding:0;color:var(--text);min-width:0;text-align:left;width:100%;min-height:38px}.source-id{width:34px;height:34px;flex:none;border:1px solid #37403c;background:#242a28;color:#bdc9c3;border-radius:6px;display:grid;place-items:center;font: .85rem var(--mono)}.source-row.is-selected .source-id{color:var(--lime);border-color:#4d6142;background:#2d392b}.source-label{display:grid;min-width:0;line-height:1.3;gap:3px}.source-label strong{font-weight:650;font-size:.9rem}.source-label small{color:var(--quiet);font-size:.8rem}.source-row .group{gap:4px}.source-row .square{width:32px;min-width:32px;min-height:32px}.source-row .square svg{width:15px;height:15px}.panel-foot{padding:10px 12px;border-top:1px solid var(--line)}.panel-foot .btn{width:100%}.inspector .panel-head{border-bottom:1px solid var(--line)}.inspector-body{padding:12px 14px}.adjustment{display:grid;grid-template-columns:1fr auto;gap:5px 10px;align-items:center;margin-bottom:11px}.adjustment label{font-size:.88rem;color:#d9ded9}.adjustment output{min-width:41px;text-align:right;color:var(--mutedLime);font:.82rem var(--mono)}.adjustment input{width:100%;grid-column:1/-1;margin:0;accent-color:var(--lime);cursor:pointer;height:17px}.adjustment input:disabled{cursor:default}.control-row{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}.control-row .btn{flex:1}.control-details{border-top:1px solid var(--line);padding-top:10px;margin-top:11px}.control-details summary{list-style:none;cursor:pointer;color:var(--quiet);font-size:.86rem}.control-details summary::after{content:"+";float:right}.control-details[open] summary::after{content:"−"}
+.notice{border:1px solid #5c4930;background:#28231a;color:#f2d3a6;padding:10px 12px;border-radius:8px;font-size:.86rem}.toast{position:fixed;left:50%;bottom:max(16px,env(safe-area-inset-bottom));translate:-50% 0;z-index:20;max-width:min(92vw,600px);padding:10px 15px;background:#2c352a;border:1px solid #506046;border-radius:8px;box-shadow:0 6px 24px #0008;color:#eff7e6;font-size:.9rem}.toast[data-bad=true]{background:#342625;border-color:#6d4540}
+dialog{width:min(490px,calc(100% - 25px));max-height:calc(100dvh - 28px);overflow:auto;padding:0;border:1px solid #3a4240;border-radius:13px;background:var(--panel);color:var(--text);box-shadow:0 24px 90px #000a}dialog::backdrop{background:#06080ac9}dialog .modal-head{position:sticky;top:0;z-index:2;background:var(--panel);padding:11px 13px 11px 16px;border-bottom:1px solid var(--line)}.modal-body{padding:16px;display:grid;gap:13px}.modal-body p{color:#bfc7c3}.modal-body strong{color:var(--text)}.modal-body ol{padding-left:21px;margin:0;display:grid;gap:8px;color:#bfc7c3}.modal-body .segmented{width:max-content;max-width:100%}.modal-actions{justify-content:flex-end;flex-wrap:wrap}.field{display:grid;gap:5px;color:#cbd2cf;font-size:.9rem;min-width:0}.field :is(input:not([type=checkbox]),select),.url-box{width:100%;min-height:39px;background:#101313;border:1px solid #3b4440;border-radius:6px;padding:7px 9px;color:var(--text);min-width:0}.field select{appearance:none;padding-right:26px;background:#101313 linear-gradient(45deg,transparent 48%,#aebbb5 50%,#aebbb5 60%,transparent 62%) right 13px center/5px 6px no-repeat;background-image:linear-gradient(45deg,transparent 48%,#aebbb5 50%,#aebbb5 62%,transparent 64%),linear-gradient(135deg,transparent 48%,#aebbb5 50%,#aebbb5 62%,transparent 64%);background-position:right 14px center,right 9px center;background-size:5px 6px,5px 6px;background-repeat:no-repeat}.field.check{display:flex;align-items:center;gap:8px}.field.check input{accent-color:var(--lime);width:17px;height:17px}.qr{min-height:178px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:#111414;padding:12px;color:var(--quiet);text-align:center}.qr:has(canvas){width:max-content;justify-self:center;background:white}.qr img,.qr canvas{height:156px;width:156px}.rule{border:0;border-top:1px solid var(--line);width:100%;margin:1px 0}.details-text summary{cursor:pointer;color:var(--quiet);font-size:.87rem}.details-text p{margin-top:8px}.form-error{min-height:1.3em;color:#ffaca5!important;font-size:.85rem}
+.phone-shell {
+  --phone-left: max(14px, env(safe-area-inset-left));
+  --phone-right: max(14px, env(safe-area-inset-right));
+  --phone-top: max(12px, env(safe-area-inset-top));
+  --phone-bottom: max(14px, env(safe-area-inset-bottom));
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #090b0a;
+}
+html[data-view=phone], html[data-view=phone] body { overflow: hidden; }
+.phone-view {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  background: radial-gradient(ellipse at 50% 45%, #212623, #090b0a 75%);
+}
+.phone-view.has-media { background: #050605; }
+.phone-view .frame-turn { inset: 0; translate: none; transform: none; }
+.phone-view .media-layer video { object-fit: contain; transform: none; filter: none; }
+.phone-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg,#0009,transparent min(100px,20%),transparent 70%,#000b);
+}
+.camera-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(to right,transparent 33.1%,#fff6 33.2% 33.45%,transparent 33.55% 66.45%,#fff6 66.55% 66.8%,transparent 66.9%),
+    linear-gradient(to bottom,transparent 33.1%,#fff6 33.2% 33.45%,transparent 33.55% 66.45%,#fff6 66.55% 66.8%,transparent 66.9%);
+}
+.phone-capture-settings { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.phone-connection { display: grid; gap: 9px; }
+#phoneRoom { text-transform: uppercase; }
+#phoneConnectionStatus { white-space: normal; }
+.source-label small[data-pair-state=paired] { color: var(--mutedLime); }
+.source-label small[data-pair-state=live] { color: #ffb3ad; }
+html[data-view=phone] #phoneDialog {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  overscroll-behavior: contain;
+}
+#phoneDialog .modal-head {
+  padding-top: max(11px, env(safe-area-inset-top));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(13px, env(safe-area-inset-right));
+}
+#phoneDialog .modal-head button { width: 44px; min-width: 44px; min-height: 44px; }
+#phoneDialog .modal-body {
+  width: min(100%, 560px);
+  margin-inline: auto;
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  gap: 10px;
+}
+.output-screen{position:fixed;inset:0;background:transparent}.output-screen.has-media{background:#000}.output-screen .media-layer{inset:0}html[data-view=output],html[data-view=output] body{background:transparent;overflow:hidden}html:not([data-view=studio]) #studio,html:not([data-view=phone]) #phone,html:not([data-view=output]) #output,html[data-view=output] #toast{display:none!important}
+@media(max-width:960px){.header-inner{padding-inline:20px}.workspace{padding-inline:20px}.studio-grid{grid-template-columns:minmax(0,1.75fr) minmax(275px,1fr);gap:12px}.stack{gap:12px}.program-stage .empty p{max-width:245px}.source-row .square{width:30px;min-width:30px}.panel-head{padding-inline:11px}}
+@media(max-width:720px){.studio-grid{grid-template-columns:minmax(0,1fr)}.workspace{padding:18px 12px 24px}.header-inner{padding-inline:12px;min-height:54px}.header .hide-small{display:none}.workspace-heading{align-items:flex-start;flex-direction:column;gap:11px;margin-bottom:13px}.workspace-heading p{margin-top:4px}.program-stage{min-height:215px;max-height:none}.panel-head,.output-bar{padding-inline:10px}.output-label .signal{font-size:.75rem}.program-actions{gap:4px}}
+@media(max-width:375px){.output-icon,.key-hint,.header .room-word{display:none}.tile-info{font-size:.75rem}.btn{padding-inline:8px}}
+@media (max-width: 760px), (pointer: coarse) {
+  .field :is(input:not([type=checkbox]), select), .url-box,
+  input:is([type=text],[type=search],[type=url]), textarea { font-size: max(16px, 1rem); }
+}
+html[data-view=phone] .field :is(input:not([type=checkbox]), select) { font-size: max(16px, 1rem); }
+html[data-keyboard] dialog[open] {
+  margin-bottom: var(--keyboard-bottom);
+  max-height: calc(var(--keyboard-viewport) - 10px);
+}
+@media (max-width: 375px) {
+  #setupButton > span:last-child, .tile-info .keycap { display: none; }
+  .output-bar { align-items: flex-start; flex-direction: column; }
+  .output-bar > .group:last-child { width: 100%; }
+  .output-bar #copyProgram { flex: 1; }
+}
+.source-actions .source-obs { min-height: 32px; }
+.source-actions .source-obs svg { width: 14px; height: 14px; }
+@media (max-width: 340px) {
+  .source-actions .source-obs { width: 32px; min-width: 32px; padding: 0; }
+  .source-actions .source-obs span { display: none; }
+}
+.output-screen[data-format] {
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+}
+.output-screen[data-format=horizontal] {
+  width: min(100vw, 177.7778dvh);
+  height: min(100dvh, 56.25vw);
+}
+.output-screen[data-format=vertical] {
+  width: min(100vw, 56.25dvh);
+  height: min(100dvh, 177.7778vw);
+}
+.output-pair {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  padding: 5%;
+  overflow: hidden;
+  color: #eff4ed;
+  background:
+    radial-gradient(ellipse at 82% 15%, #24362a, transparent 63%),
+    #111715;
+  container-type: size;
+}
+.output-pair-layout {
+  display: grid;
+  grid-template-columns: minmax(0,1.25fr) minmax(0,.85fr);
+  align-items: center;
+  gap: clamp(16px, 4cqmin, 80px);
+  width: min(100%, 1600px);
+}
+.output-pair-layout[data-manual=true] { grid-template-columns: minmax(0,1fr); max-width: 920px; }
+.output-pair-copy { min-width: 0; }
+.output-pair .brand { font-size: clamp(12px, 3cqmin, 40px); }
+.output-pair .brand-mark { width: 1.5em; height: 1.5em; border-radius: .35em; }
+.output-pair .brand-mark svg { width: 1em; height: 1em; }
+.output-pair h1 { font-size: clamp(19px, 7cqmin, 100px); margin-top: .28em; }
+.output-pair p { font-size: clamp(12px, 3.1cqmin, 36px); color: #b9c7be; margin-top: .62em; }
+.output-pair-data {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65em 1.3em;
+  margin: 1em 0 0;
+  font-size: clamp(11px, 2.8cqmin, 30px);
+}
+.output-pair-data dt { color: #a4b4ac; }
+.output-pair-data dd { margin: .15em 0 0; font: 600 1em var(--mono); color: var(--lime); overflow-wrap: anywhere; }
+.output-pair-scan {
+  justify-self: center;
+  width: min(100%, 52cqh, 420px);
+  aspect-ratio: 1;
+  padding: 7%;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border-radius: 5%;
+  background: #fff;
+  color: #223126;
+}
+.output-pair-scan :is(canvas,img) {
+  max-width: 100%;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  image-rendering: pixelated;
+}
+.output-pair-scan small { font-size: clamp(10px, 1.9cqmin, 22px); }
+@container (max-aspect-ratio: 4/5) {
+  .output-pair-layout { grid-template-columns: minmax(0,1fr); gap: clamp(12px, 5cqw, 48px); width: min(100%, 700px); }
+  .output-pair-scan { width: min(73cqw, 38cqh, 470px); }
+  .output-pair h1 { font-size: clamp(22px, 8cqw, 86px); }
+  .output-pair p { font-size: clamp(12px, 3.6cqw, 34px); }
+  .output-pair-data { font-size: clamp(11px, 3.3cqw, 28px); }
+}
+html, body, dialog, .phone-shell, .viewport { touch-action: manipulation; }
+.output-idle { background: radial-gradient(ellipse at 50% 38%, #1d2a23, #101513 72%); }
+.output-idle-content { width: max-content; max-width: 100%; text-align: center; }
+.output-idle-icon {
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 12cqmin, 142px);
+  aspect-ratio: 1;
+  margin: 0 auto clamp(12px, 3cqmin, 45px);
+  border: 1px solid #53685a;
+  border-radius: 25%;
+  color: var(--lime);
+  background: #283a30;
+}
+.output-idle-icon svg { width: 50%; height: 50%; }
+.output-idle-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5em;
+  max-width: 100%;
+  padding: .28em .7em;
+  border: 1px solid #485b50;
+  border-radius: 999px;
+  color: #d0ddcf;
+  font: 600 clamp(11px, 2.8cqmin, 32px)/1.25 var(--mono);
+  overflow-wrap: anywhere;
+}
+.output-idle h1 { margin-top: .34em; }
+.multiview .panel-head { flex-wrap: wrap; }
+.multiview-actions { flex-wrap: wrap; }
+.multiview-actions .view-layout select { width: auto; min-height: 34px; padding-block: 4px; }
+.multi-grid[data-columns="2"] { --view-columns: 2; }
+.multi-grid[data-columns="3"] { --view-columns: 3; }
+.multi-grid[data-columns="4"] { --view-columns: 4; }
+@media (min-width: 960px) {
+  .multi-grid:has(.tile:nth-child(5)) { --auto-columns: 4; }
+}
+@media (max-width: 620px) {
+  .multi-grid { --auto-columns: 2; }
+  .multiview-actions .key-hint { display: none; }
+}
+.tile { cursor: pointer; }
+.tile-select { display: block; width: 100%; padding: 0; border: 0; background: none; color: inherit; }
+.tile-select:focus-visible { outline-offset: -3px; position: relative; z-index: 1; }
+.tile-footer .tile-copy { min-width: 29px; width: 29px; min-height: 27px; margin-left: 1px; }
+.tile-footer .tile-copy svg { width: 14px; height: 14px; }
+.tile-footer > .group { flex: 1; }
+.tile-footer > .tile-copy { flex: none; }
+.tile-footer .keycap { flex: none; }
+html[data-keyboard][data-view=phone] #phoneDialog[open] {
+  top: var(--phone-keyboard-offset);
+  bottom: auto;
+  height: var(--keyboard-viewport);
+}
+.phone-header, .phone-bottom {
+  position: absolute;
+  left: var(--phone-left);
+  right: var(--phone-right);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  pointer-events: none;
+}
+.phone-header { top: var(--phone-top); z-index: 2; align-items: start; }
+.phone-bottom { bottom: var(--phone-bottom); z-index: 2; align-items: end; }
+.phone-header button, .phone-bottom button, .phone-adjust-panel { pointer-events: auto; }
+.phone-header-start, .phone-header-end {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.phone-header-start { justify-items: start; }
+.phone-header-end { justify-items: end; flex: none; }
+.phone-header-end .group { gap: 5px; }
+.phone-shell .hud-button, .phone-status {
+  min-height: 44px;
+  border-color: #ffffff33;
+  border-radius: 999px;
+  background: #0a0d0cdb;
+  color: #f1f4f0;
+}
+.phone-shell .hud-button { padding-inline: 10px; }
+.phone-shell .hud-button:hover:not(:disabled) { background: #242a28; }
+.phone-shell .hud-button.square { width: 44px; min-width: 44px; padding: 0; }
+.phone-shell .hud-button svg { width: 18px; height: 18px; }
+.phone-status {
+  min-height: 30px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 0 9px;
+}
+.phone-status span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.phone-capture-chip, .phone-shell .phone-rotation { gap: 5px; font: 600 .77rem var(--mono); }
+.phone-shell .phone-rotation { max-width: 100%; }
+.phone-rotation .mono { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.phone-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.phone-tools {
+  position: relative;
+  display: grid;
+  justify-items: start;
+  gap: 5px;
+  flex: 1;
+  min-width: 0;
+  max-width: 233px;
+}
+.phone-adjust-tabs, .phone-toolbar { display: grid; gap: 5px; }
+.phone-adjust-tabs { grid-template-columns: repeat(3, 44px); }
+.phone-adjust-panel {
+  position: absolute;
+  width: 100%;
+  bottom: calc(100% + 6px);
+  border: 1px solid #ffffff29;
+  border-radius: 9px;
+  padding: 6px 9px;
+  background: #101513f5;
+}
+.phone-adjust-panel .adjustment { margin-bottom: 0; }
+.phone-adjust-panel .adjustment label { font-size: .8rem; }
+.phone-adjust-panel .adjustment input { height: 30px; }
+.phone-toolbar { grid-template-columns: repeat(2, 44px); justify-items: center; flex: none; }
+.phone-shutter {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 0;
+  padding: 0 0 2px;
+  border-radius: 10px;
+  font-size: .78rem;
+  font-weight: 650;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-shadow: 0 1px 5px #000;
+}
+.shutter-ring {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #111b;
+}
+.shutter-ring::before {
+  content: "";
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--lime);
+}
+.phone-shutter:hover:not(:disabled) .shutter-ring { background: #394239bb; }
+.phone-shutter.transmitting .shutter-ring::before { width: 24px; height: 24px; border-radius: 5px; background: var(--red); }
+.phone-info {
+  min-width: 0;
+  max-width: 100%;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #0a0d0cdb;
+  color: #e3e9e3;
+}
+.phone-info p { font-size: .77rem; }
+.phone-info p + p { margin-top: 3px; }
+.phone-info .btn { margin-top: 4px; min-height: 44px; }
+.dissolve-layer { position: absolute; inset: 0; background: #000; pointer-events: none; }
+.phone-bottom {
+  left: 0;
+  right: 0;
+  padding-inline: max(var(--phone-left), var(--phone-right));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 8px;
+}
+.phone-tools { justify-self: start; max-width: 100%; }
+.phone-shutter { grid-column: 2; grid-row: 1; align-self: end; padding-bottom: 0; }
+.phone-shutter .shutter-ring { width: 64px; height: 64px; }
+.phone-shutter .shutter-ring::before { width: 48px; height: 48px; }
+.phone-shutter.transmitting .shutter-ring::before { width: 25px; height: 25px; }
+.phone-toolbar { grid-column: 3; grid-row: 1; justify-self: end; grid-template-columns: repeat(2, 44px); }
+.phone-adjustments {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: min(218px, calc(100vw - 2 * max(var(--phone-left), var(--phone-right))));
+  padding: 6px;
+  border: 1px solid #ffffff29;
+  border-radius: 12px;
+  background: #101513f5;
+  pointer-events: auto;
+}
+.phone-adjust-panel {
+  position: static;
+  margin-top: 6px;
+  border: 0;
+  padding: 4px 6px 0;
+  background: transparent;
+}
+.phone-adjust-tabs { grid-template-columns: repeat(3, 44px); justify-content: space-between; }
+@media (max-width: 305px) { .phone-toolbar { grid-template-columns: 44px; } }
+.program-framing { border-top: 1px solid var(--line); padding: 13px 16px 15px; background: #151819; }
+.framing-head { align-items: start; }
+.framing-head p { margin-top: 2px; }
+#programImageControls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 16px; margin-top: 11px; }
+#programImageControls :is(.control-row, .control-details) { grid-column: 1 / -1; }
+#programImageControls .control-row .btn { flex: 0 1 auto; }
+#programImageControls .adjustment { margin: 0; }
+#sourceDialog[data-source=usb] { width: min(680px, calc(100% - 24px)); }
+.usb-framing { display: grid; gap: 12px; padding-top: 13px; border-top: 1px solid var(--line); }
+.usb-framing-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 13px; align-items: start; }
+.usb-framing-preview { display: grid; gap: 7px; margin: 0; }
+.usb-stage { aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 8px; background: #0d1110; }
+.usb-stage .empty { color: var(--quiet); text-align: center; }
+.usb-status { display: flex; justify-content: space-between; gap: 8px; }
+#usbImageControls .control-row .btn { flex: 1 1 auto; }
+@media (max-width: 580px) {
+  #programImageControls { grid-template-columns: minmax(0, 1fr); row-gap: 7px; }
+  .usb-framing-grid { grid-template-columns: minmax(0, 1fr); }
+  #programName { display: none; }
+  .program-actions .btn.square { width: 31px; min-width: 31px; min-height: 34px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<defs>
+  <symbol id="i-brand" viewBox="0 0 24 24"><path d="M9 5H5v4m10-4h4v4m0 6v4h-4M5 15v4h4"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="m16 10 5-3v10l-5-3"/></symbol>
+  <symbol id="i-monitor" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="m9 15 6-6m-4-2 2-2a4.2 4.2 0 0 1 6 6l-2 2m-4 4-2 2a4.2 4.2 0 0 1-6-6l2-2"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 5a1 1 0 0 0-1-1H6a2 2 0 0 0-2 2v9a1 1 0 0 0 1 1"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 12h16M12 4v16"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h4m4 0h8M4 12h9m4 0h3M4 18h4m4 0h8M8 4v4m5 2v4m-5 2v4"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><path d="M10 4h4l.5 2.5 2 .9 2.2-1.4 2.2 3.8-2.1 1.5v2.3l2.1 1.5-2.2 3.8-2.2-1.4-2 .9L14 21h-4l-.5-2.6-2-.9-2.2 1.4-2.2-3.8 2.1-1.5v-2.3L3.1 9.8l2.2-3.8 2.2 1.4 2-.9z"/><circle cx="12" cy="12.5" r="2.5"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9 4H4v5m11-5h5v5m0 6v5h-5M4 15v5h5"/></symbol>
+  <symbol id="i-speaker" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zm4 4a4 4 0 0 1 0 6m3-9a8 8 0 0 1 0 12"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4zm5 5 5 5m0-5-5 5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-add" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 8.8a2.9 2.9 0 0 1 5.6.9c0 1.6-2.8 2-2.8 3.5m0 3.6h.01"/></symbol>
+  <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M5 11a7 7 0 1 1 1.2 5m-1.2-9v4h4"/><rect x="10" y="9" width="6" height="6" rx="1"/></symbol>
+  <symbol id="i-lens" viewBox="0 0 24 24"><path d="M8 6 9.5 4h5L16 6h3a2 2 0 0 1 2 2v2M21 14v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-3m0-4V8a2 2 0 0 1 2-2h3m9 5 3 3 3-3M8 14l-4-3-3 3"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-mirror" viewBox="0 0 24 24"><path d="M12 4v16M9 6l-5 12h5zm6 0 5 12h-5z"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11v1a7 7 0 0 0 14 0v-1m-7 8v3"/></symbol>
+  <symbol id="i-mic-off" viewBox="0 0 24 24"><path d="m3 3 18 18m-6-10V6a3 3 0 0 0-5.5-1.7M9 10v2a3 3 0 0 0 4.2 2.8M5 11v1a7 7 0 0 0 11.2 5.6M19 11v1c0 1-.2 2-.6 2.8M12 19v3"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-12h-8z"/></symbol>
+  <symbol id="i-zoom" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="m15 15 5 5M8 10.5h5m-2.5-2.5v5"/></symbol>
+  <symbol id="i-brightness" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+  <symbol id="i-contrast" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16Z" fill="currentColor" stroke="none"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></symbol>
+</defs>
+</svg>
+
+<div id="studio">
+  <header class="header"><div class="header-inner">
+    <div class="brand"><span class="brand-mark" data-icon="brand"></span><span>AirCast <em>Lite</em></span></div>
+    <div class="group">
+      <span class="signal hide-small" id="studioSignal" role="status"><span class="dot"></span><span>Connecting</span></span>
+      <button class="btn ghost plain room-btn" id="roomButton" title="Change room"><span class="room-word">Room</span><span class="mono" id="roomCode"></span></button>
+      <button class="btn ghost plain" id="setupButton" aria-label="OBS setup"><span data-icon="help"></span><span>OBS setup</span></button>
+    </div>
+  </div></header>
+  <main class="workspace">
+    <div class="spread workspace-heading">
+      <div><h1>Camera studio</h1><p>Switch live cameras in Program or send individual feeds to OBS.</p></div>
+    </div>
+    <div class="studio-grid">
+      <div class="stack">
+        <section class="panel" aria-labelledby="programTitle">
+          <div class="spread panel-head">
+            <div class="group"><span class="title-icon" data-icon="monitor"></span><h2 id="programTitle">Program</h2><span class="badge" id="programBadge"><span class="dot"></span><span>Standby</span></span></div>
+            <div class="group program-actions">
+              <span class="small muted truncate" id="programName" hidden></span>
+              <button class="btn ghost square" id="programStandby" title="Put Program in standby" aria-label="Put Program in standby" hidden data-icon="stop"></button>
+              <button class="btn ghost square" id="audioMonitor" title="Monitor Program audio" aria-label="Monitor Program audio" aria-pressed="false" disabled data-icon="mute"></button>
+              <button class="btn ghost square" id="programFraming" type="button" title="Program framing" aria-label="Program framing" aria-expanded="false" aria-controls="programFramingPanel" data-icon="sliders"></button>
+              <button class="btn ghost square" id="programFull" title="Full screen Program" aria-label="Full screen Program" data-icon="expand"></button>
+            </div>
+          </div>
+          <div class="viewport program-stage" id="programView">
+            <div class="framing-guide" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+            <div class="empty" id="programEmpty">
+              <span class="empty-icon" data-icon="camera"></span>
+              <strong id="emptyTitle">No camera on program</strong>
+              <p id="emptyText">Pair a phone or connect a camera to get started.</p>
+              <div class="group"><button class="btn" id="quickPair"><span data-icon="phone"></span>Pair a phone</button><button class="btn ghost" id="quickUSB"><span data-icon="camera"></span>Connect camera</button></div>
+            </div>
+          </div>
+          <section class="program-framing" id="programFramingPanel" aria-labelledby="programFramingTitle" hidden>
+            <div class="spread framing-head">
+              <div><h2 id="programFramingTitle">Program framing</h2><p class="small muted">Applies to the preview and Program OBS output.</p></div>
+              <button class="btn ghost tiny" id="programImageReset" type="button">Reset</button>
+            </div>
+            <div id="programImageControls"></div>
+          </section>
+          <div class="spread output-bar">
+            <div class="group">
+              <span class="output-icon" data-icon="link"></span>
+              <div class="output-label">
+                <strong>OBS Program output</strong>
+                <span class="signal" id="outputStatus"><span class="dot"></span><span>Waiting for OBS</span></span>
+              </div>
+            </div>
+            <div class="group">
+              <button class="btn accent" id="copyProgram"><span data-icon="copy"></span>Copy OBS URL</button>
+              <button class="btn ghost square" id="openProgram" title="Open clean output preview" aria-label="Open clean output preview" data-icon="monitor"></button>
+            </div>
+          </div>
+        </section>
+        <section class="panel multiview" aria-labelledby="multiTitle">
+          <div class="spread panel-head">
+            <div class="group"><span class="title-icon" data-icon="grid"></span><h2 id="multiTitle">Multiview</h2></div>
+            <div class="group multiview-actions">
+              <span class="small muted key-hint"><kbd class="keycap">1–9</kbd> to cut</span>
+              <label class="field view-layout"><select id="multiviewColumns" aria-label="Multiview columns">
+                <option value="auto">Auto layout</option><option value="2">2 columns</option><option value="3">3 columns</option><option value="4">4 columns</option>
+              </select></label>
+              <button class="btn ghost tiny" type="button" data-add-slot><span data-icon="add"></span>Add view</button>
+              <button class="btn ghost square" id="multiFull" title="Full screen Multiview" aria-label="Full screen Multiview" data-icon="expand"></button>
+            </div>
+          </div>
+          <div class="multi-grid" id="tiles"></div>
+        </section>
+      </div>
+      <aside class="stack" aria-label="Camera controls">
+        <section class="panel">
+          <div class="spread panel-head">
+            <div class="group"><span class="title-icon" data-icon="camera"></span><h2>Cameras</h2></div>
+            <span class="small muted" id="cameraCount">0 connected</span>
+          </div>
+          <div id="sourceList" class="source-list"></div>
+          <div class="panel-foot"><button class="btn ghost" data-add-slot><span data-icon="add"></span>Add camera slot</button></div>
+        </section>
+        <section class="panel inspector">
+          <div class="spread panel-head">
+            <div class="group"><span class="title-icon" data-icon="sliders"></span><h2>Image controls</h2></div>
+            <div class="group"><span id="inspectorName" class="mono muted truncate">CAM 1</span><button class="btn ghost tiny" id="imageReset" type="button">Reset</button></div>
+          </div>
+          <div class="inspector-body" id="imageControls"></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<main id="phone" class="phone-shell">
+  <div id="phoneView" class="viewport phone-view">
+    <div class="empty" id="phoneEmpty"><span class="empty-icon" data-icon="camera"></span><strong id="phoneEmptyTitle">Camera is off</strong><p id="phoneEmptyText">Enable your camera to check the shot.</p><button class="btn accent" id="enableCamera">Enable camera</button></div>
+    <div id="phoneGrid" class="camera-grid" hidden></div>
+  </div>
+  <header class="phone-header">
+    <div class="phone-header-start">
+      <span class="signal phone-status" id="phoneStatus" role="status"><span class="dot"></span><span>Camera off</span></span>
+      <button class="btn hud-button phone-rotation" id="phoneRotate" title="Rotate OBS feed 90°"><span data-icon="rotate"></span><span id="phoneAngleLabel" class="mono" aria-hidden="true">Auto</span></button>
+      <span id="phoneAngle" class="phone-sr-only" role="status">OBS Auto</span>
+    </div>
+    <div class="phone-header-end">
+      <div class="group">
+        <button class="btn hud-button square" id="phoneTorch" title="Torch unavailable" aria-label="Torch unavailable" aria-pressed="false" data-icon="bolt" disabled></button>
+        <button class="btn hud-button square" id="phoneSettings" title="Camera settings" aria-label="Camera settings" data-icon="gear"></button>
+      </div>
+      <button class="btn hud-button phone-capture-chip" id="phoneCaptureButton" title="Capture settings"><span id="phoneFormat"></span></button>
+    </div>
+  </header>
+  <div class="phone-bottom">
+    <div class="phone-tools">
+      <button type="button" class="btn hud-button square" id="phoneTools" data-icon="sliders" aria-label="OBS image controls" title="OBS image controls" aria-expanded="false" aria-controls="phoneAdjustments" hidden></button>
+      <div class="phone-adjustments" id="phoneAdjustments" hidden role="group" aria-label="OBS image controls">
+        <div class="phone-adjust-tabs">
+          <button type="button" class="btn hud-button square" data-adjust="zoom" data-label="Zoom" data-icon="zoom" aria-expanded="false" aria-controls="phoneAdjustPanel"></button>
+          <button type="button" class="btn hud-button square" data-adjust="brightness" data-label="Brightness" data-icon="brightness" aria-expanded="false" aria-controls="phoneAdjustPanel"></button>
+          <button type="button" class="btn hud-button square" data-adjust="contrast" data-label="Contrast" data-icon="contrast" aria-expanded="false" aria-controls="phoneAdjustPanel"></button>
+        </div>
+        <div class="phone-adjust-panel" id="phoneAdjustPanel" hidden><div id="phoneAdjustRanges"></div></div>
+      </div>
+      <div class="phone-info"><p id="phoneDestination" class="truncate"></p><p id="phoneHint" class="muted phone-hint" role="status" hidden></p><button class="btn ghost tiny" type="button" id="phoneRetry" hidden>Retry</button></div>
+    </div>
+    <button class="phone-shutter" id="phoneLive" disabled><span class="shutter-ring" aria-hidden="true"></span><span id="phoneLiveLabel">Go live</span></button>
+    <div class="phone-toolbar">
+      <button class="btn hud-button square" id="phoneMic" title="Enable microphone" aria-label="Enable microphone" aria-pressed="false" data-icon="mic-off"></button>
+      <button class="btn hud-button square" id="swapLens" title="Switch front or rear camera" aria-label="Switch front or rear camera" data-icon="lens" disabled></button>
+    </div>
+  </div>
+</main>
+
+<div class="viewport output-screen" id="output" aria-label="OBS camera output">
+  <section class="output-pair" id="outputPair" hidden aria-labelledby="outputPairTitle">
+    <div class="output-pair-layout" id="outputPairLayout">
+      <div class="output-pair-copy">
+        <div class="brand"><span class="brand-mark" data-icon="brand"></span><span>AirCast Lite</span></div>
+        <h1 id="outputPairTitle">Pair your phone</h1>
+        <p id="outputPairHint">Scan the code, enable your camera, then tap Go live.</p>
+        <dl class="output-pair-data">
+          <div><dt>Room ID</dt><dd id="outputPairRoom"></dd></div>
+          <div><dt>Output</dt><dd id="outputPairKind"></dd></div>
+          <div><dt>Camera</dt><dd id="outputPairCamera"></dd></div>
+        </dl>
+      </div>
+      <div class="output-pair-scan" id="outputPairQR" role="img" aria-label="Phone pairing QR code"><small>Loading QR code…</small></div>
+    </div>
+  </section>
+  <section class="output-pair output-idle" id="outputIdle" hidden aria-labelledby="outputIdleTitle">
+    <div class="output-idle-content">
+      <span class="output-idle-icon" data-icon="camera" aria-hidden="true"></span>
+      <span class="output-idle-status"><span class="dot active"></span><span id="outputIdleStatus">Paired</span></span>
+      <h1 id="outputIdleTitle">Camera paused</h1>
+      <p>Waiting for the phone to go live.</p>
+    </div>
+  </section>
+</div>
+
+<dialog id="sourceDialog" aria-labelledby="sourceDialogTitle">
+  <div class="spread modal-head"><h3 id="sourceDialogTitle">Camera setup</h3><button class="btn ghost square" data-close aria-label="Close" data-icon="close"></button></div>
+  <div class="modal-body">
+    <div class="segmented" id="sourceTabs" role="group" aria-label="Camera type">
+      <button data-source-type="phone">Phone</button><button data-source-type="usb">USB camera</button><button data-source-type="mjpeg">MJPEG</button>
+    </div>
+    <div class="modal-body" id="pairBody" style="padding:0">
+      <p id="pairRoute"></p>
+      <div class="notice" id="pairNotice" hidden></div>
+      <div id="pairQR" class="qr" role="img" aria-label="Phone pairing QR code" hidden></div>
+      <div class="group"><input class="url-box mono" id="pairURL" readonly aria-label="Phone pairing URL"><button class="btn" id="copyPair"><span data-icon="copy"></span>Copy</button></div>
+    </div>
+    <form id="usbBody" class="modal-body" style="padding:0" hidden>
+      <label class="field">Camera<select id="usbDevice"><option value="">Default camera</option></select></label>
+      <button class="btn ghost" type="button" id="usbDiscover">Show device names</button>
+      <label class="field">Capture quality<select id="usbQuality"><option value="480">480p · 30 fps</option><option value="720" selected>720p · 30 fps</option><option value="1080">1080p · 30 fps</option></select></label>
+      <label class="field check"><input type="checkbox" id="usbMic">Use default microphone</label>
+      <button class="btn accent" type="submit">Connect camera</button>
+    </form>
+    <section class="usb-framing" id="usbFraming" aria-labelledby="usbFramingTitle" hidden>
+      <div class="spread framing-head">
+        <div><h2 id="usbFramingTitle">USB framing</h2><p class="small muted">Applies to this camera in Studio and OBS.</p></div>
+        <button class="btn ghost tiny" id="usbImageReset" type="button">Reset</button>
+      </div>
+      <div class="usb-framing-grid">
+        <figure class="usb-framing-preview">
+          <div class="viewport usb-stage" id="usbPreview"><div class="empty small" id="usbPreviewEmpty">Connect a USB camera to preview framing.</div></div>
+          <figcaption class="usb-status small muted"><span>USB preview</span><span id="usbPreviewStatus" role="status">Disconnected</span></figcaption>
+        </figure>
+        <div id="usbImageControls"></div>
+      </div>
+    </section>
+    <form id="mjpegBody" class="modal-body" style="padding:0" hidden>
+      <label class="field">MJPEG stream URL<input id="mjpegURL" type="url" placeholder="https://camera.example/video" required></label>
+      <p class="small">Use the camera’s JPEG stream endpoint. An HTTPS studio needs a stream URL the browser permits over HTTPS.</p>
+      <button class="btn accent" type="submit">Connect stream</button>
+    </form>
+    <p class="form-error" id="sourceError" role="status" hidden></p>
+    <div id="slotManagement" class="modal-body" style="padding:0">
+      <hr class="rule">
+      <form class="group" id="renameForm"><label class="field" style="flex:1">Display name<input id="slotName" maxlength="36" required></label><button class="btn" style="align-self:end" type="submit">Save</button></form>
+      <div class="spread"><button class="btn ghost danger" id="removeSlot">Remove slot</button><button class="btn ghost" id="disconnectSource" hidden>Disconnect source</button></div>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="setupDialog" aria-labelledby="setupTitle">
+  <div class="spread modal-head"><h3 id="setupTitle">OBS setup</h3><button class="btn ghost square" data-close aria-label="Close" data-icon="close"></button></div>
+  <div class="modal-body">
+    <p>Use a camera’s OBS URL to pair a phone directly. Keep Camera Studio open for Program switching and for USB or MJPEG sources.</p>
+    <ol>
+      <li>In OBS, add a <strong>Browser</strong> source under <strong>Sources</strong>.</li>
+      <li>Paste the URL. Match the Browser Source and OBS canvas sizes. Use <strong>1920 × 1080</strong> for landscape or <strong>1080 × 1920</strong> for portrait.</li>
+      <li>Scan the QR on the OBS preview to pair. The pairing screen clears as soon as video arrives.</li>
+      <li>Leave <strong>Shutdown source when not visible</strong> and <strong>Refresh browser when scene becomes active</strong> off.</li>
+      <li>For phone audio, enable the phone’s microphone and turn on <strong>Control audio via OBS</strong> in the Browser Source.</li>
+    </ol>
+    <div class="notice" id="setupNotice" hidden></div>
+    <details class="details-text"><summary>Portrait and landscape video</summary><p>On the phone, leave Auto-rotate on. Unlock screen rotation, or allow motion access if your phone stays locked. Use Fit entire frame in OBS framing to keep the whole picture when it turns. The same URL works with either OBS canvas size.</p></details>
+    <details class="details-text"><summary>Install on a phone</summary><p>Open your HTTPS AirCast address. On iPhone use Share and Add to Home Screen. On Android use Install app or Add to Home screen from the browser menu.</p></details>
+    <details class="details-text"><summary>Network and browser access</summary><p>Open the same HTTPS-hosted page on all devices for phone pairing. A local file works for testing on this computer. Wireless pairing uses the PeerJS signaling service and works best on the same Wi‑Fi. Networks that block peer-to-peer traffic can require a TURN relay. The phone releases its camera and slot when you leave its view.</p></details>
+    <div class="group modal-actions"><button class="btn ghost" id="openPhoneSetup"><span data-icon="phone"></span>Open phone camera</button><button class="btn accent" id="setupCopy"><span data-icon="copy"></span>Copy Program URL</button></div>
+  </div>
+</dialog>
+
+<dialog id="roomDialog" aria-labelledby="roomTitle">
+  <div class="spread modal-head"><h3 id="roomTitle">Studio room</h3><button class="btn ghost square" data-close aria-label="Close" data-icon="close"></button></div>
+  <form class="modal-body" id="roomForm">
+    <label class="field">Room code<input id="roomInput" maxlength="16" minlength="3" pattern="[A-Za-z0-9]{3,16}" required autocomplete="off" class="mono"></label>
+    <p class="small">Changing rooms disconnects wireless cameras and OBS outputs. Existing links will still point to the previous room.</p>
+    <div class="group modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn accent" type="submit">Change room</button></div>
+  </form>
+</dialog>
+
+<dialog id="phoneDialog" aria-labelledby="phoneTitle">
+  <div class="spread modal-head"><h3 id="phoneTitle">Camera settings</h3><button class="btn ghost square" data-close aria-label="Close" data-icon="close"></button></div>
+  <div class="modal-body">
+    <form class="phone-connection" id="phoneConnectionForm">
+      <div class="spread">
+        <h2>Connection</h2>
+        <span class="signal" id="phoneConnectionStatus" role="status"><span class="dot"></span><span>Unpaired</span></span>
+      </div>
+      <div class="phone-capture-settings">
+        <label class="field">Room ID<input id="phoneRoom" class="mono" type="text" enterkeyhint="go" required minlength="3" maxlength="16" pattern="[A-Za-z0-9]{3,16}" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+        <label class="field">Camera<select id="phoneSlot"></select></label>
+      </div>
+      <p class="small muted" id="phoneConnectionHint" role="status" hidden></p>
+      <div class="group modal-actions">
+        <button class="btn ghost" id="phoneCopyObs" type="button"><span data-icon="copy"></span><span>Copy OBS URL</span></button>
+        <button class="btn ghost" id="phoneDisconnect" type="button" hidden>Disconnect</button>
+        <button class="btn accent" id="phoneConnect" type="submit">Connect</button>
+      </div>
+    </form>
+    <hr class="rule">
+    <div class="phone-capture-settings">
+      <label class="field">Stream resolution<select id="phoneQuality" aria-describedby="phoneCaptureSummary"></select></label>
+      <label class="field">Frame rate<select id="phoneFrameRate" aria-describedby="phoneCaptureSummary"></select></label>
+    </div>
+    <p class="small" id="phoneCaptureSummary" role="status"></p>
+    <label class="field check"><input type="checkbox" id="phoneAutoRotate" checked>Auto-rotate video for OBS</label>
+    <button class="btn ghost" id="phoneMotion" type="button" hidden>Allow motion access</button>
+    <p class="small muted" id="phoneMotionStatus" role="status" hidden></p>
+    <label class="field check"><input type="checkbox" id="showGrid">Show framing grid</label>
+    <hr class="rule">
+    <div class="spread"><h2>OBS image controls</h2><button class="btn ghost tiny" id="phoneImageReset">Reset</button></div>
+    <div id="phoneImageControls"></div>
+    <div class="group modal-actions"><button class="btn ghost danger" id="turnOffCamera">Turn camera off</button><button class="btn accent" data-close>Done</button></div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" hidden></div>
+<script>
+'use strict';
+
+const $ = (id) => document.getElementById(id);
+const view = document.documentElement.dataset.view;
+const routeName = (slot) => String(slot).replace(/^CAM(?=\d)/, 'CAM ');
+const KEY = 'aircast-lite-studio-v3';
+const PHONE_KEY = 'aircast-lite-phone-v3';
+const MULTIVIEW_LAYOUTS = ['auto', '2', '3', '4'];
+const BASE_IMAGE = Object.freeze({ zoom: 1, brightness: 100, contrast: 100, rotation: 0, mirror: false, flip: false, fit: 'contain' });
+const PROFILES = {
+  '240': { width: 426, height: 240, bitrate: 300000 },
+  '360': { width: 640, height: 360, bitrate: 650000 },
+  '480': { width: 854, height: 480, bitrate: 1100000 },
+  '540': { width: 960, height: 540, bitrate: 1600000 },
+  '720': { width: 1280, height: 720, bitrate: 2400000 },
+  '1080': { width: 1920, height: 1080, bitrate: 4400000 },
+  '1440': { width: 2560, height: 1440, bitrate: 8000000 },
+  '2160': { width: 3840, height: 2160, bitrate: 14500000 }
+};
+const PHONE_QUALITIES = ['360', '480', '720', '1080', '2160'];
+const CAPTURE_RATES = ['auto', '15', '20', '24', '25', '30', '48', '50', '60', '90', '120'];
+const MAX_VIDEO_BITRATE = 24000000;
+const STUN_SERVERS = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun.cloudflare.com:3478' }];
+const PHONE_PAIR_TIMEOUT = 14000;
+const PHONE_VIDEO_TIMEOUT = 18000;
+let relayServers = [];
+let relayRequest;
+
+function turnServers(entries) {
+  if (!Array.isArray(entries)) return [];
+  return entries.flatMap((server) => {
+    if (typeof server?.username !== 'string' || typeof server.credential !== 'string') return [];
+    const urls = [server.urls].flat().filter((url) => typeof url === 'string' && /^turns?:[^\s/]+$/i.test(url));
+    return urls.length ? [{ urls, username: server.username, credential: server.credential }] : [];
+  });
+}
+
+function loadRelayServers() {
+  const path = document.querySelector('meta[name="aircast-ice-endpoint"]')?.content.trim();
+  if (!path || !['http:', 'https:'].includes(location.protocol)) return;
+  let url;
+  try { url = new URL(path, location.href); } catch { return; }
+  if (url.origin !== location.origin || url.username || url.password) return;
+  if (relayRequest) return relayRequest;
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), 2000);
+  relayRequest = fetch(url, { cache: 'no-store', redirect: 'error', signal: controller.signal })
+    .then(async (response) => {
+      if (!response.ok) return;
+      const data = await response.json();
+      relayServers = turnServers(data?.iceServers);
+    })
+    .catch(() => {})
+    .finally(() => { clearTimeout(deadline); relayRequest = null; });
+  return relayRequest;
+}
+
+function rtcConfiguration() {
+  const relays = relayServers.length ? relayServers : turnServers(window.peerjs?.util?.defaultConfig?.iceServers);
+  return { iceServers: [...STUN_SERVERS, ...relays] };
+}
+const PROTOCOL = 'aircast-lite-v3';
+const CAMERA_SLOTS = Array.from({ length: 9 }, (_, index) => 'CAM' + (index + 1));
+const DEFAULT_SLOTS = CAMERA_SLOTS.slice(0, 3);
+const LIBS = {
+  Peer: [
+    './aircast-peer.min.js',
+    'https://cdn.jsdelivr.net/npm/peerjs@1.5.5/dist/peerjs.min.js',
+    'https://unpkg.com/peerjs@1.5.5/dist/peerjs.min.js'
+  ],
+  QRCode: [
+    'https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+  ]
+};
+const libraries = new Map();
+
+function randomCode(length = 10) {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes = crypto.getRandomValues(new Uint8Array(length));
+  return Array.from(bytes, (value) => alphabet[value % alphabet.length]).join('');
+}
+
+function saved(key) {
+  try { return JSON.parse(localStorage.getItem(key)) || {}; }
+  catch { return {}; }
+}
+
+function store(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); }
+  catch { /* Private storage is optional. */ }
+}
+
+function legacyRoom() {
+  try { return sessionStorage.getItem('aircast_studio_code'); }
+  catch { return null; }
+}
+
+const normalizeRoom = (value) => typeof value === 'string' && /^[A-Z0-9]{3,16}$/i.test(value) ? value.toUpperCase() : '';
+const normalizeSlot = (value) => typeof value === 'string' && /^CAM[1-9]$/i.test(value) ? value.toUpperCase() : '';
+const slotNumber = (slot) => Number(slot.slice(3));
+const profile = (quality) => PROFILES[quality] || PROFILES['720'];
+
+function makeUrl(room, view, slot, muted = false) {
+  const url = new URL(location.href);
+  url.hash = '';
+  url.search = '';
+  if (view === 'obs') {
+    url.searchParams.set('obs', room);
+    if (slot) url.searchParams.set('c', slotNumber(slot));
+  } else {
+    url.searchParams.set('room', room);
+    url.searchParams.set('mode', 'sender');
+    if (slot) url.searchParams.set('cam', slot);
+  }
+  if (muted) url.searchParams.set('mute', '1');
+  return url.href;
+}
+
+function endpoint(room) {
+  return 'AIRCAST-HUB3-' + room;
+}
+
+function cameraEndpoint(room, slot) {
+  return 'AIRCAST-CAMERA-' + room + '-' + slot;
+}
+
+function httpURL(value) {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password ? url.href : '';
+  } catch { return ''; }
+}
+
+function localPage() {
+  return location.protocol === 'file:' || ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);
+}
+
+function loadLibrary(name) {
+  if (window[name]) return Promise.resolve(window[name]);
+  if (libraries.has(name)) return libraries.get(name);
+
+  const request = (async () => {
+    for (const url of LIBS[name]) {
+      const loaded = await new Promise((resolve) => {
+        const script = document.createElement('script');
+        const finish = (ok) => { clearTimeout(timer); if (!ok) script.remove(); resolve(ok); };
+        const timer = setTimeout(() => finish(false), url.startsWith('./') ? 2200 : 4200);
+        script.async = true;
+        script.src = url;
+        script.onload = () => finish(Boolean(window[name]));
+        script.onerror = () => finish(false);
+        document.head.append(script);
+      });
+      if (loaded) return window[name];
+    }
+    throw new Error(name === 'Peer' ? 'Could not load wireless signaling. Check your Internet connection.' : 'Could not load the QR code.');
+  })();
+  libraries.set(name, request);
+  request.catch(() => libraries.delete(name));
+  return request;
+}
+
+const icon = (name) => '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><use href="#i-' + name + '"></use></svg>';
+
+function hydrateIcons(root = document) {
+  root.querySelectorAll('[data-icon]').forEach((el) => { el.innerHTML = icon(el.dataset.icon); });
+}
+
+function buttonState(button, active, label, glyph) {
+  button.setAttribute('aria-pressed', String(active));
+  if (label) {
+    button.title = label;
+    button.setAttribute('aria-label', label);
+  }
+  if (glyph) button.innerHTML = icon(glyph);
+}
+
+function setSignal(element, text, tone = '') {
+  element.lastElementChild.textContent = text;
+  element.dataset.tone = tone;
+  element.title = text;
+}
+
+let toastTimer;
+function notify(text, bad = false) {
+  const toast = $('toast');
+  (document.querySelector('dialog[open]') || document.fullscreenElement || document.body).append(toast);
+  toast.textContent = text;
+  toast.dataset.bad = String(bad);
+  toast.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.hidden = true; }, 3600);
+}
+
+async function copy(value, message) {
+  if (navigator.clipboard?.writeText) {
+    try { await navigator.clipboard.writeText(value); notify(message); return true; } catch { /* Try the legacy clipboard. */ }
+  }
+  const context = document.querySelector('dialog[open]') || document.fullscreenElement || document.body;
+  const input = document.createElement('textarea');
+  input.value = value;
+  input.readOnly = true;
+  input.style.cssText = 'position:fixed;left:-999px;top:0';
+  context.append(input);
+  input.select();
+  let copied = false;
+  try { copied = document.execCommand('copy'); } catch { /* Offer a selectable field. */ }
+  input.remove();
+  if (copied) { notify(message); return true; }
+  const fallback = document.createElement('dialog');
+  fallback.innerHTML = '<div class="modal-body"><h3>Copy link</h3><p>Use your browser’s copy command.</p><input class="url-box mono" aria-label="Link" readonly><form method="dialog"><button class="btn">Done</button></form></div>';
+  document.body.append(fallback);
+  fallback.addEventListener('close', () => fallback.remove());
+  fallback.showModal();
+  const field = fallback.querySelector('input');
+  field.value = value;
+  field.select();
+}
+
+function fullscreen(element) {
+  if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  else if (element.requestFullscreen) element.requestFullscreen().catch(() => notify('Full screen is unavailable here.', true));
+  else notify('Full screen is unavailable here.', true);
+}
+
+function bounded(value, min, max, fallback) {
+  return typeof value === 'number' && Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : fallback;
+}
+
+function imageSettings(value, inherited = false) {
+  const s = value && typeof value === 'object' ? value : {};
+  return {
+    zoom: bounded(s.zoom, 1, 3, 1),
+    brightness: bounded(s.brightness, 50, 150, 100),
+    contrast: bounded(s.contrast, 50, 150, 100),
+    rotation: [0, 90, 180, 270].includes(s.rotation) ? s.rotation : 0,
+    mirror: s.mirror === true,
+    flip: s.flip === true,
+    fit: s.fit === 'cover' ? 'cover' : s.fit === 'contain' || !inherited ? 'contain' : 'inherit'
+  };
+}
+
+function combineImages(base, adjustment) {
+  return {
+    zoom: base.zoom * adjustment.zoom,
+    brightness: base.brightness * adjustment.brightness / 100,
+    contrast: base.contrast * adjustment.contrast / 100,
+    rotation: (360 + adjustment.rotation + (adjustment.mirror !== adjustment.flip ? -base.rotation : base.rotation)) % 360,
+    mirror: base.mirror !== adjustment.mirror,
+    flip: base.flip !== adjustment.flip,
+    fit: adjustment.fit === 'inherit' ? base.fit : adjustment.fit
+  };
+}
+
+function outputImage(value) {
+  const settings = imageSettings(value);
+  settings.zoom = bounded(value?.zoom, 1, 9, 1);
+  settings.brightness = bounded(value?.brightness, 25, 225, 100);
+  settings.contrast = bounded(value?.contrast, 25, 225, 100);
+  return settings;
+}
+
+const liveTrack = (stream, kind) => stream?.getTracks().find((track) => track.kind === kind && track.readyState === 'live') || null;
+
+function captureError(error) {
+  if (!navigator.mediaDevices?.getUserMedia) return 'Camera access needs HTTPS or localhost.';
+  switch (error?.name) {
+    case 'NotAllowedError':
+    case 'SecurityError': return 'Camera or microphone permission was denied. Check your browser permissions and try again.';
+    case 'NotFoundError':
+    case 'OverconstrainedError': return 'That camera or capture format is unavailable.';
+    case 'NotReadableError':
+    case 'AbortError': return 'The camera is busy or unavailable. Close apps using it and try again.';
+    default: return 'Could not open the camera. Check the device and try again.';
+  }
+}
+
+function videoConstraints(quality) {
+  const { width, height } = profile(quality);
+  return { width: { ideal: width }, height: { ideal: height }, frameRate: { ideal: 30, max: 30 } };
+}
+
+function audioConstraints() {
+  return { channelCount: { ideal: 1 }, echoCancellation: true, autoGainControl: true, noiseSuppression: true };
+}
+
+function stopTracks(stream) {
+  stream?.getTracks().forEach((track) => track.stop());
+}
+
+class Monitor {
+  constructor(root, { muted = true, change = () => {} } = {}) {
+    this.root = root;
+    this.change = change;
+    this.layer = document.createElement('div');
+    this.layer.className = 'media-layer';
+    this.layer.innerHTML = '<div class="frame-turn"><video autoplay playsinline></video><img alt="" decoding="async"></div>';
+    this.turn = this.layer.firstElementChild;
+    this.video = this.turn.firstElementChild;
+    this.video.muted = muted;
+    this.img = this.turn.lastElementChild;
+    this.root.prepend(this.layer);
+    this.stream = null;
+    this.url = '';
+    this.current = BASE_IMAGE;
+    this.visible = false;
+    this.showing = false;
+    this.img.hidden = true;
+    this.video.hidden = true;
+    this.video.addEventListener('loadeddata', () => this.present(Boolean(this.stream && this.showing)));
+    this.video.addEventListener('playing', () => this.present(Boolean(this.stream && this.showing)));
+    this.img.addEventListener('load', () => {
+      if (this.url) this.present(this.showing);
+      this.onImageState?.(true, this.url);
+    });
+    this.img.addEventListener('error', () => {
+      this.present(false);
+      if (this.url) this.onImageState?.(false, this.url);
+    });
+    this.observer = typeof ResizeObserver === 'function' ? new ResizeObserver(() => this.transform()) : null;
+    this.observer?.observe(root);
+  }
+
+  display({ stream = null, url = '', image = BASE_IMAGE, show = true } = {}) {
+    this.showing = show;
+    this.current = image;
+    this.transform();
+    if (stream !== this.stream) {
+      this.stream = stream;
+      this.video.srcObject = stream;
+      this.present(false);
+      if (stream) this.play();
+    }
+    if (url !== this.url) {
+      this.url = url;
+      this.present(false);
+      if (url) this.img.src = url;
+      else this.img.removeAttribute('src');
+    }
+    this.present(show && (stream ? this.video.readyState >= 2 : Boolean(url && this.img.naturalWidth)));
+  }
+
+  play() {
+    this.video.play().catch(() => {
+      if (!this.video.muted) {
+        this.video.muted = true;
+        this.video.play().catch(() => {});
+        this.onMutedFallback?.();
+      }
+    });
+  }
+
+  transform() {
+    const s = this.current;
+    const quarter = s.rotation % 180 !== 0;
+    this.turn.style.width = quarter ? this.root.clientHeight + 'px' : '100%';
+    this.turn.style.height = quarter ? this.root.clientWidth + 'px' : '100%';
+    this.turn.style.setProperty('--rotate', s.rotation + 'deg');
+    this.turn.style.setProperty('--scale-x', String(s.zoom * (s.mirror ? -1 : 1)));
+    this.turn.style.setProperty('--scale-y', String(s.zoom * (s.flip ? -1 : 1)));
+    this.turn.style.setProperty('--brightness', String(s.brightness / 100));
+    this.turn.style.setProperty('--contrast', String(s.contrast / 100));
+    this.turn.style.setProperty('--fit', s.fit === 'cover' ? 'cover' : 'contain');
+  }
+
+  present(visible) {
+    this.video.hidden = !this.stream;
+    this.video.style.opacity = visible && this.stream ? '1' : '0';
+    this.img.hidden = !(visible && this.url);
+    this.root.classList.toggle('has-media', visible);
+    if (this.visible !== visible) {
+      this.visible = visible;
+      this.change(visible);
+    }
+  }
+
+  destroy() {
+    this.observer?.disconnect();
+    this.video.srcObject = null;
+    this.img.removeAttribute('src');
+    this.layer.remove();
+  }
+}
+// Only Program uses two surfaces. Camera tiles and the phone keep their single preview.
+class DissolveMonitor {
+  constructor(root, { change = () => {} } = {}) {
+    this.root = root;
+    this.change = change;
+    this.visible = false;
+    this.reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+    this.buffers = Array.from({ length: 2 }, () => {
+      const layer = document.createElement('div');
+      layer.className = 'dissolve-layer';
+      layer.hidden = true;
+      root.prepend(layer);
+      const buffer = { layer };
+      buffer.monitor = new Monitor(layer, { change: (visible) => this.onFrame(buffer, visible) });
+      buffer.monitor.onMutedFallback = () => {
+        if (this.front === buffer) this.onMutedFallback?.();
+      };
+      return buffer;
+    });
+    this.front = this.buffers[0];
+    root.prepend(this.front.layer);
+  }
+
+  get video() { return this.front.monitor.video; }
+
+  setMuted(muted) {
+    this.video.muted = muted;
+    if (this.pending) this.pending.muted = muted;
+  }
+
+  play() { this.front.monitor.play(); }
+
+  display({ stream = null, url = '', image = BASE_IMAGE, show = true, muted = true, onReady } = {}) {
+    if (!show || (!stream && !url)) {
+      this.cancelPending();
+      this.finishFade();
+      this.hide(this.front);
+      return;
+    }
+
+    const matches = (buffer) => buffer && buffer.monitor.stream === stream && buffer.monitor.url === url;
+    let buffer;
+    if (matches(this.front)) {
+      this.cancelPending();
+      buffer = this.front;
+    } else if (matches(this.pending)) {
+      buffer = this.pending;
+    } else {
+      this.cancelPending();
+      this.finishFade();
+      buffer = this.buffers.find((item) => item !== this.front);
+      this.pending = buffer;
+      buffer.layer.hidden = false;
+      buffer.layer.style.opacity = '0';
+      buffer.layer.style.zIndex = '0';
+    }
+    buffer.ready = onReady;
+    buffer.muted = muted;
+    buffer.monitor.video.muted = buffer !== this.front || muted;
+    buffer.monitor.display({ stream, url, image });
+    if (buffer === this.front && buffer.monitor.visible && !this.fade) this.confirm(buffer);
+  }
+
+  onFrame(buffer, visible) {
+    if (visible && buffer === this.pending) {
+      this.promote(buffer);
+    } else if (buffer === this.front) {
+      this.root.classList.toggle('has-media', visible);
+      if (this.visible !== visible) {
+        this.visible = visible;
+        this.change(visible);
+      }
+    }
+  }
+
+  promote(incoming) {
+    const previous = this.front;
+    const dissolve = previous.monitor.visible && !this.reducedMotion.matches && typeof incoming.layer.animate === 'function';
+    this.pending = null;
+    this.front = incoming;
+    this.root.prepend(incoming.layer);
+    previous.layer.style.zIndex = '0';
+    incoming.layer.style.zIndex = '1';
+    incoming.layer.style.opacity = '1';
+    previous.monitor.video.muted = true;
+    incoming.monitor.video.muted = incoming.muted;
+    if (!incoming.muted && incoming.monitor.stream) incoming.monitor.play();
+    this.onFrame(incoming, true);
+    if (!dissolve) {
+      this.hide(previous);
+      this.confirm(incoming);
+      return;
+    }
+    const duration = 180;
+    const animation = incoming.layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration, easing: 'ease-out' });
+    const fade = { animation, previous };
+    this.fade = fade;
+    const finish = () => { if (this.fade === fade) this.finishFade(); };
+    animation.onfinish = finish;
+    // Hidden browser sources can suspend their animation timeline.
+    fade.timer = setTimeout(finish, duration + 50);
+  }
+
+  confirm(buffer) {
+    const ready = buffer.ready;
+    buffer.ready = null;
+    ready?.();
+  }
+
+  finishFade() {
+    if (!this.fade) return;
+    const { animation, previous, timer } = this.fade;
+    this.fade = null;
+    clearTimeout(timer);
+    animation.onfinish = null;
+    animation.cancel();
+    this.hide(previous);
+    this.confirm(this.front);
+  }
+
+  cancelPending() {
+    if (!this.pending) return;
+    const buffer = this.pending;
+    this.pending = null;
+    this.hide(buffer);
+  }
+
+  hide(buffer) {
+    buffer.ready = null;
+    buffer.layer.hidden = true;
+    buffer.monitor.video.muted = true;
+    buffer.monitor.display({ show: false });
+  }
+}
+
+// Signaling reconnects independently of active peer-to-peer media.
+class Signaler {
+  constructor(id, status = () => {}) {
+    this.id = id;
+    this.status = status;
+    this.peer = null;
+    this.closed = false;
+    this.retry = 0;
+    this.ready = false;
+    this.onOnline = () => this.retryNow?.();
+    window.addEventListener('online', this.onOnline);
+    this.start();
+  }
+
+  async start() {
+    this.status('Connecting to signaling');
+    try {
+      const [Peer] = await Promise.all([loadLibrary('Peer'), loadRelayServers()]);
+      if (this.closed) return;
+      const options = { config: rtcConfiguration(), secure: true, debug: 0 };
+      const peer = new Peer(this.id || 'AIRCAST-CLIENT-' + randomCode(20), options);
+      this.peer = peer;
+      let idTaken = false;
+      peer.on('open', () => {
+        if (this.closed || this.peer !== peer) return;
+        clearTimeout(this.timer);
+        this.retryNow = null;
+        this.ready = true;
+        this.retry = 0;
+        this.status('Signaling ready', 'good');
+        this.onReady?.();
+      });
+      peer.on('connection', (connection) => {
+        if (this.closed || this.peer !== peer || connection.label !== PROTOCOL || !this.accept) connection.close();
+        else this.accept(connection);
+      });
+      peer.on('disconnected', () => {
+        if (this.peer === peer && !idTaken) this.recover('Signaling disconnected');
+      });
+      peer.on('close', () => {
+        if (this.peer === peer && !idTaken) this.recover('Signaling disconnected', true);
+      });
+      peer.on('error', (error) => {
+        if (this.closed || this.peer !== peer || error.type === 'webrtc') return;
+        if (error.type === 'peer-unavailable') {
+          this.onMissing?.();
+          return;
+        }
+        if (error.type === 'unavailable-id') {
+          idTaken = true;
+          this.recover('Room already in use', true, 'bad');
+          return;
+        }
+        if (['browser-incompatible', 'invalid-id', 'invalid-key', 'ssl-unavailable'].includes(error.type)) {
+          this.ready = false;
+          this.status('Signaling is unavailable in this browser', 'bad');
+          return;
+        }
+        this.recover('Signaling connection interrupted');
+      });
+      this.recover('Connecting to signaling', false, '', 11000);
+    } catch (error) {
+      if (!this.closed) this.recover(error.message, true, 'bad');
+    }
+  }
+
+  recover(message, rebuild = false, tone = 'warn', delay) {
+    if (this.closed) return;
+    this.ready = false;
+    this.status(message, tone);
+    clearTimeout(this.timer);
+    const wait = delay ?? Math.min(12000, 1500 * 2 ** Math.min(this.retry++, 3));
+    this.retryNow = () => {
+      clearTimeout(this.timer);
+      this.retryNow = null;
+      if (this.closed) return;
+      const peer = this.peer;
+      if (!rebuild && peer && !peer.destroyed && peer.disconnected) {
+        try {
+          peer.reconnect();
+          this.recover('Reconnecting signaling', false, 'warn', 11000);
+          return;
+        } catch { /* Recreate the signaling peer. */ }
+      }
+      this.peer = null;
+      peer?.destroy();
+      this.start();
+    };
+    this.timer = setTimeout(this.retryNow, wait);
+  }
+
+  dial(id, metadata) {
+    if (!this.ready || !this.peer?.open) return null;
+    try { return this.peer.connect(id, { label: PROTOCOL, metadata, serialization: 'json', reliable: true }); }
+    catch { return null; }
+  }
+
+  close() {
+    this.closed = true;
+    clearTimeout(this.timer);
+    this.retryNow = null;
+    window.removeEventListener('online', this.onOnline);
+    this.peer?.destroy();
+  }
+}
+
+class Link {
+  constructor(connection, { open, receive, close }) {
+    this.connection = connection;
+    this.closed = false;
+    this.open = false;
+    this.lastHeard = Date.now();
+    this.onClose = close;
+    this.timer = setTimeout(() => this.close('Connection timed out'), 9000);
+    const online = () => {
+      if (this.closed || this.open) return;
+      this.open = true;
+      this.lastHeard = Date.now();
+      clearTimeout(this.timer);
+      this.heartbeat = setInterval(() => {
+        if (Date.now() - this.lastHeard > 18000) this.close('Connection timed out');
+        else this.send({ type: 'ping' });
+      }, 4000);
+      this.watchConnection();
+      open(this);
+    };
+    connection.on('open', online);
+    connection.on('data', (message) => {
+      if (this.closed || !message || typeof message.type !== 'string') return;
+      this.lastHeard = Date.now();
+      if (message.type === 'leave') this.close();
+      else if (message.type === 'ping') this.send({ type: 'pong' });
+      else if (message.type !== 'pong') receive(message, this);
+    });
+    connection.on('close', () => this.close());
+    connection.on('error', () => this.close('Connection interrupted'));
+    if (connection.open) queueMicrotask(online);
+  }
+
+  watchConnection() {
+    const pc = this.connection.peerConnection;
+    if (!pc?.addEventListener) return;
+    this.transport = pc;
+    this.onTransportState = () => {
+      const state = pc.connectionState;
+      if (state === 'failed' || state === 'closed') {
+        this.close('Connection interrupted');
+      } else if (state === 'disconnected') {
+        if (!this.disconnectTimer) this.disconnectTimer = setTimeout(() => {
+          this.disconnectTimer = null;
+          if (pc.connectionState === 'disconnected') this.close('Connection interrupted');
+        }, 5000);
+      } else if (state === 'connected') {
+        clearTimeout(this.disconnectTimer);
+        this.disconnectTimer = null;
+      }
+    };
+    pc.addEventListener('connectionstatechange', this.onTransportState);
+  }
+
+  leave() {
+    this.send({ type: 'leave' });
+    this.close();
+  }
+
+  send(message) {
+    if (!this.open || this.closed) return false;
+    try { this.connection.send(message); return true; }
+    catch { this.close('Connection interrupted'); return false; }
+  }
+
+  close(reason = '') {
+    if (this.closed) return;
+    this.closed = true;
+    this.open = false;
+    clearTimeout(this.timer);
+    clearTimeout(this.disconnectTimer);
+    clearInterval(this.heartbeat);
+    this.transport?.removeEventListener('connectionstatechange', this.onTransportState);
+    this.connection.close();
+    this.onClose?.(this, reason);
+  }
+}
+
+class ClientLink {
+  constructor(target, metadata, handlers, localId) {
+    this.target = target;
+    this.metadata = metadata;
+    this.handlers = handlers;
+    this.retry = 0;
+    this.closed = false;
+    this.signaler = new Signaler(localId, handlers.status);
+    this.signaler.onReady = () => {
+      handlers.ready?.();
+      this.connect();
+    };
+    this.signaler.onMissing = () => {
+      if (this.link && !this.link.open) this.link.close('Waiting for destination');
+    };
+    this.onOnline = () => {
+      this.retry = 0;
+      this.connect();
+    };
+    window.addEventListener('online', this.onOnline);
+  }
+
+  connect() {
+    if (this.closed || this.link || !this.signaler.ready || navigator.onLine === false) return;
+    clearTimeout(this.timer);
+    const connection = this.signaler.dial(this.target, this.metadata);
+    if (!connection) { this.schedule(); return; }
+    this.handlers.status?.('Connecting to destination');
+    this.link = new Link(connection, {
+      open: (link) => {
+        this.retry = 0;
+        this.handlers.open(link);
+      },
+      receive: (message, link) => this.handlers.receive(message, link),
+      close: (link, reason) => {
+        if (this.link !== link) return;
+        this.link = null;
+        this.handlers.close(link);
+        if (this.closed) return;
+        this.handlers.status?.(reason || 'Reconnecting', 'warn');
+        this.schedule();
+      }
+    });
+  }
+
+  schedule() {
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.connect(), Math.min(5000, 900 * 2 ** Math.min(this.retry++, 3)));
+  }
+
+  close() {
+    this.closed = true;
+    clearTimeout(this.timer);
+    window.removeEventListener('online', this.onOnline);
+    this.link?.leave();
+    this.signaler.close();
+  }
+}
+
+// A transport keeps one video and one audio sender across cuts, including silent cameras.
+class MediaPipe {
+  constructor(link, send, callbacks = {}) {
+    this.link = link;
+    this.sender = send;
+    this.callbacks = callbacks;
+    this.signals = Promise.resolve();
+    this.current = { kind: 'standby' };
+    this.incoming = null;
+    this.pc = null;
+  }
+
+  send(message) {
+    this.link.send({ type: 'media', ...message });
+  }
+
+  configure(epoch) {
+    this.release();
+    const pc = new RTCPeerConnection(rtcConfiguration());
+    this.pc = pc;
+    this.epoch = epoch;
+    this.outboundIce = [];
+    this.announced = false;
+    this.inboundIce = [];
+    this.incoming = new MediaStream();
+    this.snapshot = '';
+    pc.onicecandidate = ({ candidate }) => {
+      if (this.pc !== pc || !candidate) return;
+      const data = { epoch, candidate: candidate.toJSON() };
+      if (this.announced) this.send(data);
+      else this.outboundIce.push(data);
+    };
+    pc.ontrack = ({ track }) => {
+      if (this.pc !== pc) return;
+      this.incoming.addTrack(track);
+      track.onunmute = track.onmute = track.onended = () => {
+        if (this.pc === pc) this.callbacks.stream?.(this.incoming);
+      };
+      this.callbacks.stream?.(this.incoming);
+    };
+    pc.onconnectionstatechange = () => {
+      if (this.pc !== pc) return;
+      const state = pc.connectionState;
+      this.callbacks.state?.(state);
+      if (state === 'connected') {
+        clearTimeout(this.failureTimer);
+        this.tune();
+      } else if (state === 'failed') {
+        this.failed(pc);
+      } else if (state === 'disconnected') {
+        clearTimeout(this.failureTimer);
+        this.failureTimer = setTimeout(() => this.failed(pc), 6500);
+      }
+    };
+    this.failureTimer = setTimeout(() => {
+      if (pc.connectionState !== 'connected') this.failed(pc);
+    }, 15000);
+    return pc;
+  }
+
+  async announce(pc, description) {
+    if (this.pc !== pc) return;
+    await pc.setLocalDescription(description);
+    if (this.pc !== pc) return;
+    const local = pc.localDescription;
+    this.send({ epoch: this.epoch, description: { type: local.type, sdp: local.sdp } });
+    this.announced = true;
+    this.outboundIce.splice(0).forEach((candidate) => this.send(candidate));
+  }
+
+  accept(message) {
+    if (this.closed) return;
+    this.signals = this.signals.then(() => this.handle(message)).catch(() => {
+      if (this.pc && (!message.epoch || message.epoch === this.epoch)) this.failed(this.pc);
+    });
+  }
+
+  async handle(message) {
+    if (this.closed) return;
+    if (message.reset) {
+      if (this.sender) this.rebuild();
+      return;
+    }
+    if (message.snapshot && !this.sender) {
+      this.callbacks.snapshot?.(message.snapshot);
+      return;
+    }
+    if (typeof message.epoch !== 'string') return;
+    if (!this.sender && message.description?.type === 'offer') {
+      const pc = this.configure(message.epoch);
+      this.callbacks.stream?.(null);
+      await pc.setRemoteDescription(message.description);
+      await this.announce(pc, await pc.createAnswer());
+      return;
+    }
+    const pc = this.pc;
+    if (!pc || this.epoch !== message.epoch) return;
+    if (this.sender && message.description?.type === 'answer') {
+      await pc.setRemoteDescription(message.description);
+      const pending = this.inboundIce.splice(0);
+      for (const candidate of pending) await pc.addIceCandidate(candidate).catch(() => {});
+    } else if (message.candidate) {
+      if (pc.remoteDescription) await pc.addIceCandidate(message.candidate).catch(() => {});
+      else this.inboundIce.push(message.candidate);
+    }
+  }
+
+  update(source, snapshot) {
+    if (this.closed) return;
+    this.current = { ...snapshot, source };
+    this.pending = true;
+    this.pump();
+  }
+
+  async pump() {
+    if (this.pumping || this.closed || this.recoverTimer) return;
+    this.pumping = true;
+    let pc;
+    try {
+      while (this.pending && !this.closed && !this.recoverTimer) {
+        this.pending = false;
+        pc = this.pc;
+        const { source, bitrate, scale, ...snapshot } = this.current;
+        const video = snapshot.kind === 'video' ? liveTrack(source, 'video') : null;
+        const audio = video && snapshot.audio !== false ? liveTrack(source, 'audio') : null;
+        const outbound = JSON.stringify(snapshot);
+        if (this.snapshot !== outbound) {
+          this.snapshot = outbound;
+          this.send({ snapshot });
+        }
+        if (!pc && video) {
+          pc = this.configure(randomCode(12));
+          this.snapshot = outbound;
+          this.videoSender = pc.addTransceiver(video, {
+            direction: 'sendonly', streams: [this.incoming],
+            sendEncodings: bitrate ? [{ maxBitrate: bitrate, scaleResolutionDownBy: scale ?? 1 }] : []
+          }).sender;
+          this.audioSender = pc.addTransceiver(audio || 'audio', { direction: 'sendonly', streams: [this.incoming] }).sender;
+          await this.announce(pc, await pc.createOffer());
+        } else if (this.pc) {
+          const replace = [];
+          if (this.videoSender.track !== video) replace.push(this.videoSender.replaceTrack(video));
+          if (this.audioSender.track !== audio) replace.push(this.audioSender.replaceTrack(audio));
+          await Promise.all(replace);
+        }
+        this.tune();
+      }
+    } catch {
+      if (pc && this.pc === pc) this.failed(pc);
+    } finally {
+      this.pumping = false;
+    }
+  }
+
+  async tune() {
+    const sender = this.videoSender;
+    if (!sender?.track || this.tuningSender === sender || this.pc?.connectionState !== 'connected') return;
+    this.tuningSender = sender;
+    try {
+      while (this.videoSender === sender && sender.track && this.pc?.connectionState === 'connected') {
+        const { bitrate, scale = 1 } = this.current;
+        if (!bitrate || (this.lastEncoding?.bitrate === bitrate && this.lastEncoding.scale === scale)) return;
+        const parameters = sender.getParameters();
+        if (!parameters.encodings?.length) return;
+        parameters.encodings[0].maxBitrate = bitrate;
+        parameters.encodings[0].scaleResolutionDownBy = scale;
+        parameters.degradationPreference = 'maintain-resolution';
+        await sender.setParameters(parameters);
+        if (this.videoSender === sender) this.lastEncoding = { bitrate, scale };
+      }
+    } catch { /* Leave the current encoding in place until the next update. */ }
+    finally { if (this.tuningSender === sender) this.tuningSender = null; }
+  }
+
+  failed(pc) {
+    if (this.pc !== pc || this.closed) return;
+    this.callbacks.state?.('failed');
+    if (this.sender) this.rebuild();
+    else {
+      this.release();
+      this.callbacks.stream?.(null);
+      this.send({ reset: true });
+    }
+  }
+
+  rebuild() {
+    if (this.recoverTimer || this.closed) return;
+    this.release();
+    this.snapshot = '';
+    this.pending = true;
+    this.recoverTimer = setTimeout(() => {
+      this.recoverTimer = null;
+      this.pump();
+    }, 850);
+  }
+
+  release() {
+    clearTimeout(this.failureTimer);
+    const pc = this.pc;
+    this.pc = null;
+    this.videoSender = null;
+    this.audioSender = null;
+    this.lastEncoding = null;
+    this.incoming = null;
+    pc?.close();
+  }
+
+  close() {
+    this.closed = true;
+    clearTimeout(this.recoverTimer);
+    this.release();
+  }
+}
+// A Program cut stages a second transport briefly and retires the old one after presentation.
+class ProgramSender {
+  constructor(link) {
+    this.link = link;
+    this.sequence = 0;
+  }
+
+  update(stream, snapshot, force = false) {
+    if (snapshot.kind === 'standby') {
+      const signature = JSON.stringify(snapshot);
+      if (this.standby !== signature) {
+        this.standby = signature;
+        this.link.send({ type: 'program', standby: snapshot });
+      }
+      this.close();
+      return;
+    }
+    this.standby = null;
+    if (!force && this.current && this.current !== this.active && this.current.slot !== snapshot.pairSlot) {
+      this.queued = { stream, snapshot };
+      if (!this.queueTimer) this.queueTimer = setTimeout(() => this.flush(), 1000);
+      return;
+    }
+    this.clearQueue();
+    if (this.current?.slot !== snapshot.pairSlot) {
+      if (this.current !== this.active) this.current?.pipe.close();
+      this.current = this.active?.slot === snapshot.pairSlot ? this.active : this.create(snapshot.pairSlot);
+      this.link.send({ type: 'program', stage: this.current.id });
+    }
+    this.current.pipe.update(stream, snapshot);
+  }
+
+  create(slot) {
+    const id = ++this.sequence;
+    const pipe = new MediaPipe({ send: (packet) => this.link.send({ ...packet, programId: id }) }, true);
+    return { slot, id, pipe };
+  }
+
+  accept(message) {
+    if (message.type === 'program' && message.shown === this.current?.id && this.active !== this.current) {
+      this.active?.pipe.close();
+      this.active = this.current;
+      this.flush();
+    } else if (message.type === 'media') {
+      const route = this.current?.id === message.programId ? this.current : this.active;
+      if (route?.id === message.programId) route.pipe.accept(message);
+    }
+  }
+
+  flush() {
+    const queued = this.queued;
+    this.clearQueue();
+    if (queued) this.update(queued.stream, queued.snapshot, true);
+  }
+
+  clearQueue() {
+    clearTimeout(this.queueTimer);
+    this.queueTimer = null;
+    this.queued = null;
+  }
+
+  close() {
+    this.clearQueue();
+    if (this.active !== this.current) this.active?.pipe.close();
+    this.current?.pipe.close();
+    this.current = this.active = null;
+  }
+}
+
+class ProgramReceiver {
+  constructor(link, { parse, show, cancel }) {
+    this.link = link;
+    this.parse = parse;
+    this.show = show;
+    this.cancel = cancel;
+  }
+
+  accept(message) {
+    if (message.type === 'program' && message.standby) {
+      this.close();
+      this.show({ snapshot: this.parse(message.standby), stream: null });
+    } else if (message.type === 'program' && Number.isSafeInteger(message.stage) && message.stage > 0) {
+      this.stage(message.stage);
+    } else if (message.type === 'media') {
+      const route = this.current?.id === message.programId ? this.current : this.active;
+      if (route?.id === message.programId) route.pipe.accept(message);
+    }
+  }
+
+  stage(id) {
+    if (this.current?.id === id) return;
+    this.cancel();
+    if (this.current !== this.active) this.current?.pipe.close();
+    if (this.active?.id === id) {
+      this.current = this.active;
+      this.present(this.active);
+      return;
+    }
+    const route = { id, snapshot: null, stream: null };
+    this.current = route;
+    route.pipe = new MediaPipe({ send: (packet) => this.link.send({ ...packet, programId: id }) }, false, {
+      snapshot: (value) => { route.snapshot = this.parse(value); this.present(route); },
+      stream: (value) => { route.stream = value; this.present(route); }
+    });
+  }
+
+  present(route) {
+    if (this.current !== route || !route.snapshot) return;
+    const video = liveTrack(route.stream, 'video');
+    if (route.snapshot.kind === 'video' && (!video || video.muted)) return;
+    this.show(route, () => {
+      if (this.current !== route || this.active === route) return;
+      this.active?.pipe.close();
+      this.active = route;
+      this.link.send({ type: 'program', shown: route.id });
+    });
+  }
+
+  close() {
+    this.cancel();
+    if (this.active !== this.current) this.active?.pipe.close();
+    this.current?.pipe.close();
+    this.current = this.active = null;
+  }
+}
+
+function createInspector(container, get, change, allowInherit, showRotation = true, rangeHost = container, onRefresh) {
+  const ranges = [
+    { key: 'zoom', label: 'Zoom', min: 1, max: 3, step: 0.05, format: (value) => Number(value.toFixed(2)) + '×' },
+    { key: 'brightness', label: 'Brightness', min: 50, max: 150, step: 1, format: (value) => value + '%' },
+    { key: 'contrast', label: 'Contrast', min: 50, max: 150, step: 1, format: (value) => value + '%' }
+  ];
+  const prefix = container.id;
+  rangeHost.innerHTML = ranges.map(({ key, label, min, max, step }) =>
+    '<div class="adjustment"><label for="' + prefix + '-' + key + '">' + label + '</label><output for="' + prefix + '-' + key + '"></output><input id="' + prefix + '-' + key + '" type="range" min="' + min + '" max="' + max + '" step="' + step + '"></div>'
+  ).join('');
+  container.insertAdjacentHTML('beforeend',
+    '<div class="control-row"><button class="btn ghost tiny" data-turn>' + icon('rotate') + '<span></span></button><button class="btn ghost tiny" data-mirror>' + icon('mirror') + 'Mirror</button><button class="btn ghost tiny" data-flip>Flip</button></div>' +
+    '<details class="control-details"><summary>More controls</summary><label class="field" style="margin-top:8px">' + (allowInherit ? 'Framing' : 'OBS framing') + '<select>' +
+    (allowInherit ? '<option value="inherit">Follow source</option>' : '') +
+    '<option value="contain">Fit entire frame</option><option value="cover">Fill frame</option></select></label><div class="control-row" data-extras hidden></div></details>');
+
+  const turn = container.querySelector('[data-turn]');
+  turn.hidden = !showRotation;
+  const mirror = container.querySelector('[data-mirror]');
+  const flip = container.querySelector('[data-flip]');
+  const fit = container.querySelector('select');
+  const fields = ranges.map((range) => ({
+    ...range,
+    input: $(prefix + '-' + range.key),
+    output: $(prefix + '-' + range.key).previousElementSibling
+  }));
+  const refresh = () => {
+    const s = get();
+    fields.forEach(({ key, input, output, format }) => {
+      input.value = s[key];
+      output.textContent = format(s[key]);
+    });
+    turn.lastElementChild.textContent = 'Rotate ' + s.rotation + '°';
+    turn.setAttribute('aria-label', 'Rotate clockwise 90 degrees. Current rotation ' + s.rotation + ' degrees.');
+    buttonState(mirror, s.mirror, 'Mirror horizontally');
+    buttonState(flip, s.flip, 'Flip vertically');
+    fit.value = s.fit;
+    onRefresh?.();
+  };
+  const update = (key, value, commit = true) => { change(key, value, commit); refresh(); };
+  fields.forEach(({ key, input }) => {
+    input.addEventListener('input', () => update(key, Number(input.value), false));
+    input.addEventListener('change', () => update(key, Number(input.value)));
+  });
+  turn.onclick = () => update('rotation', (get().rotation + 90) % 360);
+  mirror.onclick = () => update('mirror', !get().mirror);
+  flip.onclick = () => update('flip', !get().flip);
+  fit.onchange = () => update('fit', fit.value);
+  refresh();
+  return refresh;
+}
+
+function studio() {
+  const stored = saved(KEY);
+  let room = normalizeRoom(query.get('room')) || normalizeRoom(stored.room) || normalizeRoom(legacyRoom()) || randomCode();
+  let multiviewColumns = MULTIVIEW_LAYOUTS.includes(stored.multiviewColumns) ? stored.multiviewColumns : 'auto';
+  let signaler;
+  let selected = '';
+  let dialogSlot = '';
+  let sourceView = 'phone';
+  let qrToken = 0;
+  let monitoring = false;
+  let recording = null;
+  let program = stored.program === '' ? '' : normalizeSlot(stored.program) || null;
+  let programImage = imageSettings(stored.programImage, true);
+  const cameras = new Map();
+  const subscriptions = new Set();
+  const attempts = new Map();
+  const receiverLinks = new Set();
+  const cards = new Map();
+  const restored = new Map((Array.isArray(stored.slots) ? stored.slots : []).filter((entry) =>
+    normalizeSlot(entry?.slot) && typeof entry.name === 'string').map((entry) => [entry.slot, entry]));
+  const initial = restored.size ? [...restored.keys()] : DEFAULT_SLOTS;
+
+  function add(slot, entry = {}) {
+    const camera = {
+      slot, name: entry.name?.trim().slice(0, 36) || routeName(slot),
+      image: imageSettings(entry.image, true), mjpeg: httpURL(entry.mjpeg),
+      phoneImage: BASE_IMAGE, link: null, kind: '', stream: null, ready: false
+    };
+    cameras.set(slot, camera);
+    return camera;
+  }
+
+  initial.forEach((slot) => add(slot, restored.get(slot)));
+  const ordered = () => [...cameras.values()].sort((a, b) => slotNumber(a.slot) - slotNumber(b.slot));
+  selected = cameras.has(stored.selected) ? stored.selected : ordered()[0].slot;
+  if (program && !cameras.has(program)) program = null;
+
+  function persist() {
+    store(KEY, { room, program, programImage, selected, multiviewColumns, slots: ordered().map(({ slot, name, image, mjpeg }) => ({ slot, name, image, mjpeg })) });
+  }
+
+  const obsUrl = (slot = '', muted = false) => makeUrl(room, 'obs', slot, muted);
+
+  function copyObsOutput(slot) {
+    const name = slot ? cameras.get(slot).name : 'Program';
+    copy(obsUrl(slot), name + ' OBS URL copied');
+  }
+
+  const monitor = new DissolveMonitor($('programView'), { change: (visible) => { $('programEmpty').hidden = visible; } });
+  monitor.onMutedFallback = () => {
+    monitoring = false;
+    buttonState($('audioMonitor'), false, 'Monitor Program audio', 'mute');
+    notify('Click the audio monitor button to enable playback.', true);
+  };
+  const usbMonitor = new Monitor($('usbPreview'), { change: (visible) => { $('usbPreviewEmpty').hidden = visible; } });
+  let imageTimer;
+  let programImagePending = false;
+  const pendingImage = new Set();
+  const refreshImage = createInspector($('imageControls'), () => cameras.get(selected).image,
+    (key, value, commit) => changeSourceImage(cameras.get(selected), key, value, commit), true);
+  const refreshUsbImage = createInspector($('usbImageControls'), () => cameras.get(dialogSlot)?.image || imageSettings(null, true),
+    (key, value, commit) => changeSourceImage(cameras.get(dialogSlot), key, value, commit), true);
+  const refreshProgramImage = createInspector($('programImageControls'), () => programImage, (key, value, commit) => {
+    programImage[key] = value;
+    if (commit) persist();
+    programImagePending = true;
+    scheduleImageUpdate();
+  }, true);
+
+  function changeSourceImage(camera, key, value, commit) {
+    if (!camera) return;
+    camera.image[key] = value;
+    if (commit) persist();
+    pendingImage.add(camera);
+    scheduleImageUpdate();
+  }
+
+  function scheduleImageUpdate() {
+    if (imageTimer) return;
+    imageTimer = setTimeout(() => {
+      imageTimer = null;
+      const updateProgramImage = programImagePending;
+      programImagePending = false;
+      const programSource = cameras.get(program);
+      for (const camera of pendingImage) if (cameras.get(camera.slot) === camera) refreshCamera(camera);
+      if (updateProgramImage && !pendingImage.has(programSource)) updateProgram();
+      pendingImage.clear();
+      refreshImage();
+      if ($('sourceDialog').open && sourceView === 'usb') refreshUsbImage();
+    }, 24);
+  }
+
+  function resetSourceImage(camera) {
+    if (!camera) return;
+    camera.image = imageSettings(null, true);
+    persist();
+    refreshImage();
+    refreshUsbImage();
+    refreshCamera(camera);
+  }
+
+  function updateUsbPreview() {
+    const camera = cameras.get(dialogSlot);
+    const live = camera?.kind === 'usb' && camera.ready;
+    usbMonitor.display({ stream: live ? camera.stream : null, image: cameraImage(camera), show: live });
+    $('usbPreviewStatus').textContent = live ? camera.format : 'Disconnected';
+    $('usbBody').querySelector('[type=submit]').textContent = live ? 'Apply capture settings' : 'Connect camera';
+  }
+
+  const extras = $('imageControls').querySelector('[data-extras]');
+  extras.hidden = false;
+  extras.innerHTML = '<button class="btn ghost tiny" id="remoteTorch">' + icon('bolt') + 'Torch</button><button class="btn ghost tiny" id="recordClip">Record raw clip</button>';
+  $('remoteTorch').onclick = () => cameras.get(selected).link?.send({ type: 'torch' });
+  $('recordClip').onclick = () => toggleRecording();
+
+  function sourceStatus(camera) {
+    if (camera.kind === 'phone') return camera.ready && camera.format ? 'Live · ' + camera.format : camera.ready ? 'Live' : 'Paired';
+    if (camera.kind === 'usb') return camera.ready ? (camera.format || 'USB connected') : 'USB camera disconnected';
+    if (camera.kind === 'mjpeg') return camera.ready ? 'Network camera' : (camera.failed ? 'Stream unavailable' : 'Opening network stream');
+    return 'Unpaired';
+  }
+
+  function makeCard(camera) {
+    const row = document.createElement('div');
+    row.className = 'source-row';
+    row.innerHTML = '<button class="source-select" type="button" aria-pressed="false"><span class="source-id mono"></span><span class="source-label"><strong class="truncate"></strong><small class="truncate"></small></span></button><div class="group source-actions"><button class="btn ghost tiny source-obs" type="button" data-copy>' + icon('copy') + '<span>OBS</span></button><button class="btn ghost square" type="button" data-pair>' + icon('phone') + '</button><button class="btn ghost square" type="button" data-options>' + icon('gear') + '</button></div>';
+    row.querySelector('.source-id').textContent = String(slotNumber(camera.slot)).padStart(2, '0');
+    const select = row.querySelector('.source-select');
+    select.onclick = () => {
+      selected = camera.slot;
+      persist();
+      refreshSelection();
+    };
+    row.querySelector('[data-copy]').onclick = () => copyObsOutput(camera.slot);
+    row.querySelector('[data-pair]').onclick = () => openSource(camera.slot, 'phone');
+    row.querySelector('[data-options]').onclick = () => openSource(camera.slot, camera.kind === 'phone' ? 'phone' : camera.kind || 'phone');
+
+    const tile = document.createElement('div');
+    tile.className = 'tile';
+    tile.innerHTML = '<button class="tile-select" type="button"><div class="viewport tile-stage">' + icon('camera') + '</div></button><div class="spread tile-info tile-footer"><span class="group truncate"><span class="dot"></span><span class="truncate" data-name></span></span><kbd class="keycap"></kbd><button class="btn ghost square tile-copy" type="button" data-copy>' + icon('copy') + '</button></div>';
+    tile.querySelector('kbd').textContent = slotNumber(camera.slot);
+    tile.onclick = () => camera.ready ? cut(camera.slot) : openSource(camera.slot, camera.kind === 'mjpeg' ? 'mjpeg' : camera.kind === 'usb' ? 'usb' : 'phone');
+    tile.querySelector('[data-copy]').onclick = (event) => {
+      event.stopPropagation();
+      copyObsOutput(camera.slot);
+    };
+    const tileMonitor = new Monitor(tile.querySelector('.tile-stage'));
+    tileMonitor.onImageState = (ready, url) => {
+      if (camera.kind !== 'mjpeg' || camera.url !== url || (camera.ready === ready && camera.failed === !ready)) return;
+      camera.ready = ready;
+      camera.failed = !ready;
+      useFirstProgram(camera);
+      refreshCamera(camera);
+    };
+
+    cards.set(camera.slot, { row, tile, tileMonitor });
+  }
+
+  function syncCards() {
+    const sourceList = $('sourceList');
+    const tiles = $('tiles');
+    for (const [index, camera] of ordered().entries()) {
+      if (!cards.has(camera.slot)) makeCard(camera);
+      const { row, tile } = cards.get(camera.slot);
+      if (sourceList.children[index] !== row) sourceList.insertBefore(row, sourceList.children[index] || null);
+      if (tiles.children[index] !== tile) tiles.insertBefore(tile, tiles.children[index] || null);
+      refreshCamera(camera, false);
+    }
+    document.querySelectorAll('[data-add-slot]').forEach((button) => {
+      button.disabled = cameras.size >= CAMERA_SLOTS.length;
+      button.title = button.disabled ? 'All camera slots are in use' : '';
+    });
+    refreshSelection();
+  }
+
+  function refreshSelection() {
+    for (const [slot, { row, tile }] of cards) {
+      row.classList.toggle('is-selected', slot === selected);
+      row.querySelector('.source-select').setAttribute('aria-pressed', String(slot === selected));
+      tile.setAttribute('aria-current', String(slot === program));
+    }
+    $('inspectorName').textContent = cameras.get(selected).name;
+    refreshImage();
+    refreshExtras();
+    updateProgram();
+  }
+
+  function refreshExtras() {
+    const source = cameras.get(selected);
+    $('remoteTorch').disabled = !source.torchSupported;
+    $('remoteTorch').hidden = !source.torchSupported;
+    buttonState($('remoteTorch'), source.torchOn === true);
+    $('recordClip').disabled = !recording && (!source.ready || !source.stream || !window.MediaRecorder);
+    $('recordClip').textContent = recording ? 'Stop clip' : 'Record raw clip';
+    buttonState($('recordClip'), Boolean(recording));
+  }
+
+  function refreshCamera(camera, output = true) {
+    const card = cards.get(camera.slot);
+    if (!card) return;
+    const { row, tile, tileMonitor } = card;
+    row.querySelector('strong').textContent = camera.name;
+    const status = row.querySelector('small');
+    status.textContent = sourceStatus(camera);
+    status.dataset.pairState = camera.kind === 'phone' ? (camera.ready ? 'live' : 'paired') : '';
+    row.querySelector('[data-pair]').title = row.querySelector('[data-pair]').ariaLabel = 'Pair phone with ' + camera.name;
+    row.querySelector('[data-options]').title = row.querySelector('[data-options]').ariaLabel = 'Configure ' + camera.name;
+    const copyLabel = 'Copy OBS URL for ' + camera.name;
+    for (const control of [row, tile]) {
+      const button = control.querySelector('[data-copy]');
+      button.title = button.ariaLabel = copyLabel;
+    }
+    tile.querySelector('[data-name]').textContent = camera.name;
+    const dot = tile.querySelector('.dot');
+    dot.className = 'dot' + (camera.ready ? (camera.slot === program ? ' live' : ' active') : camera.kind === 'phone' ? ' active' : camera.kind ? ' warn' : '');
+    const selectTile = tile.querySelector('.tile-select');
+    selectTile.title = selectTile.ariaLabel = camera.ready ? 'Cut to ' + camera.name : 'Set up ' + camera.name;
+    tileMonitor.display({ stream: camera.ready ? camera.stream : null, url: camera.kind === 'mjpeg' ? camera.url : '', image: cameraImage(camera) });
+    $('cameraCount').textContent = [...cameras.values()].filter((source) => source.ready || (source.kind === 'phone' && source.link?.open)).length + ' connected';
+    if ($('sourceDialog').open && sourceView === 'usb' && camera.slot === dialogSlot) updateUsbPreview();
+    if (output) {
+      if (camera.slot === selected) refreshExtras();
+      if (camera.slot === program) updateProgram();
+      else syncOutputs(camera.slot);
+    }
+  }
+
+  function cameraImage(camera) {
+    return combineImages(camera?.phoneImage || BASE_IMAGE, camera?.image || imageSettings(null, true));
+  }
+
+  function programFraming(camera) {
+    return outputImage(combineImages(cameraImage(camera), programImage));
+  }
+
+  function updateProgram() {
+    const camera = cameras.get(program);
+    const active = Boolean(camera?.ready);
+    const label = active ? 'On program' : 'Standby';
+    $('programBadge').dataset.live = String(active);
+    $('programBadge').lastElementChild.textContent = label;
+    $('programStandby').hidden = !program;
+    $('programName').hidden = !camera;
+    $('programName').textContent = camera?.name || '';
+    $('emptyTitle').textContent = camera ? (camera.ready ? 'Connecting video' : 'Waiting for ' + camera.name) : 'No camera on program';
+    $('emptyText').textContent = camera ? (camera.ready ? 'Opening the selected feed.' : 'Program will resume when this camera returns.') : 'Pair a phone or connect a camera to get started.';
+    $('quickPair').hidden = Boolean(camera?.ready);
+    $('quickUSB').hidden = Boolean(camera?.ready);
+    $('audioMonitor').disabled = !cameraAudio(camera);
+    monitor.display({
+      stream: active ? camera.stream : null, url: active ? camera.url : '',
+      image: programFraming(camera), show: active, muted: !monitoring
+    });
+    syncOutputs();
+  }
+
+  function cameraAudio(camera) {
+    return Boolean(camera?.ready && (camera.kind !== 'phone' || camera.audio) && liveTrack(camera.stream, 'audio'));
+  }
+
+  function syncOutputs(changedSlot) {
+    let programs = 0;
+    for (const output of subscriptions) {
+      if (!output.slot) programs++;
+      if (changedSlot && output.slot !== changedSlot) continue;
+      const camera = cameras.get(output.slot || program);
+      const pairSlot = output.slot || program || selected;
+      const image = output.slot ? cameraImage(camera) : programFraming(camera);
+      if (!camera?.ready) {
+        const paired = camera?.kind === 'phone' && Boolean(camera.link?.open);
+        const idleCamera = paired && camera.phonePaused && camera.phoneAired ? camera.name : '';
+        output.pipe.update(null, { kind: 'standby', idleCamera, pairSlot, paired });
+      } else if (camera.kind === 'mjpeg') {
+        output.pipe.update(null, { kind: 'mjpeg', url: camera.url, image, pairSlot });
+      } else {
+        output.pipe.update(camera.stream, { kind: 'video', image, audio: cameraAudio(camera), bitrate: camera.bitrate || 3500000, pairSlot });
+      }
+    }
+    setSignal($('outputStatus'), programs ? programs + (programs === 1 ? ' output connected' : ' outputs connected') : 'Waiting for OBS', programs ? 'good' : '');
+  }
+
+  function cut(slot) {
+    if (slot && !cameras.get(slot)?.ready) return;
+    const prior = program;
+    program = slot;
+    if (slot) selected = slot;
+    persist();
+    if (prior && cameras.has(prior)) refreshCamera(cameras.get(prior), false);
+    if (slot) refreshCamera(cameras.get(slot), false);
+    refreshSelection();
+  }
+
+  function useFirstProgram(camera) {
+    if (program !== null || !camera.ready) return;
+    program = camera.slot;
+    cards.get(camera.slot)?.tile.setAttribute('aria-current', 'true');
+    persist();
+  }
+
+  function disconnect(camera, cancelAttempt = true) {
+    if (cancelAttempt) attempts.delete(camera.slot);
+    const link = camera.link;
+    camera.link = null;
+    link?.close();
+    if (camera.kind === 'usb') stopTracks(camera.stream);
+    camera.kind = '';
+    camera.stream = null;
+    camera.url = '';
+    camera.ready = false;
+    camera.failed = false;
+    camera.format = '';
+    camera.torchSupported = false;
+    camera.torchOn = false;
+    camera.phoneImage = BASE_IMAGE;
+    camera.audio = false;
+    camera.bitrate = 0;
+    camera.phoneVideo = false;
+    camera.phonePaused = false;
+    camera.phoneAired = false;
+    camera.mjpeg = '';
+    camera.usb = null;
+  }
+
+  function startRoom() {
+    $('roomCode').textContent = room;
+    signaler = new Signaler(endpoint(room), (message, tone) => {
+      setSignal($('studioSignal'), message, tone);
+    });
+    signaler.accept = accept;
+  }
+
+  function rejectPair(link, type) {
+    link.send({ type });
+    setTimeout(() => link.close(), 250);
+  }
+
+  function accept(connection) {
+    const metadata = connection.metadata || {};
+    const slot = normalizeSlot(metadata.slot);
+    if (metadata.role === 'output' && (!metadata.slot || slot)) {
+      let output;
+      const link = new Link(connection, {
+        open: (active) => {
+          const pipe = !slot && metadata.smoothProgram === true ? new ProgramSender(active) : new MediaPipe(active, true);
+          output = { slot, pipe };
+          subscriptions.add(output);
+          syncOutputs();
+        },
+        receive: (message) => {
+          if (message.type === 'media' || message.type === 'program') output?.pipe.accept(message);
+        },
+        close: (active) => {
+          receiverLinks.delete(active);
+          if (!output) return;
+          output.pipe.close();
+          subscriptions.delete(output);
+          syncOutputs();
+        }
+      });
+      receiverLinks.add(link);
+    } else if (metadata.role === 'phone' && slot) {
+      const camera = cameras.get(slot);
+      let pipe;
+      const phone = new Link(connection, {
+        open: (link) => {
+          if (!camera || cameras.get(slot) !== camera) { rejectPair(link, 'unknown-slot'); return; }
+          const prior = camera.link;
+          const occupied = camera.kind && camera.kind !== 'phone';
+          if (occupied || (prior && prior.connection.metadata?.identity !== metadata.identity)) {
+            rejectPair(link, 'occupied');
+            return;
+          }
+          // Reclaim a slot after a reload, but leave any other camera slots alone.
+          camera.link = link;
+          if (prior) rejectPair(prior, 'replaced');
+          camera.kind = 'phone';
+          camera.stream = null;
+          camera.ready = false;
+          camera.format = '';
+          camera.phoneImage = BASE_IMAGE;
+          camera.torchSupported = false;
+          camera.torchOn = false;
+          camera.audio = false;
+          camera.phoneVideo = false;
+          camera.phonePaused = false;
+          camera.phoneAired = false;
+          const updatePhoneReadiness = () => {
+            const video = liveTrack(camera.stream, 'video');
+            camera.ready = Boolean(camera.phoneVideo && video && !video.muted);
+            camera.phoneAired ||= camera.ready;
+            useFirstProgram(camera);
+            refreshCamera(camera);
+          };
+          pipe = new MediaPipe(link, false, {
+            stream: (stream) => {
+              if (camera.link !== link) return;
+              camera.stream = stream;
+              updatePhoneReadiness();
+            },
+            snapshot: (snapshot) => {
+              if (camera.link !== link) return;
+              camera.format = typeof snapshot.format === 'string' ? snapshot.format.slice(0, 28) : '';
+              camera.phoneVideo = snapshot.kind === 'video';
+              camera.phonePaused = !camera.phoneVideo && snapshot.paused === true;
+              camera.audio = snapshot.audio === true;
+              camera.bitrate = bounded(snapshot.rate, 250000, MAX_VIDEO_BITRATE, 2400000);
+              camera.phoneImage = imageSettings(snapshot.image);
+              camera.torchSupported = snapshot.torchSupported === true;
+              camera.torchOn = snapshot.torchOn === true;
+              updatePhoneReadiness();
+            }
+          });
+          link.send({ type: 'paired' });
+          refreshCamera(camera);
+        },
+        receive: (message, link) => { if (camera?.link === link && message.type === 'media') pipe?.accept(message); },
+        close: (link) => {
+          receiverLinks.delete(link);
+          pipe?.close();
+          if (camera?.link !== link) return;
+          disconnect(camera, false);
+          refreshCamera(camera);
+        }
+      });
+      receiverLinks.add(phone);
+    } else {
+      connection.close();
+    }
+  }
+  function formError(message) {
+    $('sourceError').textContent = message;
+    $('sourceError').hidden = !message;
+  }
+
+  async function renderPair(camera) {
+    const token = ++qrToken;
+    const url = makeUrl(room, 'phone', camera.slot);
+    $('pairURL').value = url;
+    $('pairRoute').textContent = 'Scan with your phone to pair this camera. Tap Go live when you’re ready.';
+    const offline = localPage() || location.protocol !== 'https:';
+    $('pairNotice').hidden = !offline;
+    $('pairNotice').textContent = 'For phone pairing across devices, open AirCast from a shared HTTPS address first.';
+    const box = $('pairQR');
+    box.hidden = offline;
+    box.textContent = offline ? '' : 'Loading QR code…';
+    if (offline) return;
+    try {
+      const QRCode = await loadLibrary('QRCode');
+      if (token !== qrToken) return;
+      box.textContent = '';
+      new QRCode(box, { text: url, width: 156, height: 156, correctLevel: QRCode.CorrectLevel.M });
+    } catch {
+      if (token === qrToken) box.textContent = 'QR code unavailable. Copy the pairing link below.';
+    }
+  }
+
+  function showSourceType(type) {
+    sourceView = type;
+    const camera = cameras.get(dialogSlot);
+    ++qrToken;
+    formError('');
+    $('pairBody').hidden = type !== 'phone';
+    $('sourceDialog').dataset.source = type;
+    $('usbBody').hidden = type !== 'usb';
+    $('usbFraming').hidden = type !== 'usb';
+    if (type !== 'usb') usbMonitor.display({ show: false });
+    $('mjpegBody').hidden = type !== 'mjpeg';
+    $('disconnectSource').hidden = !camera.kind;
+    $('disconnectSource').textContent = camera.kind === 'phone' ? 'Disconnect phone' : 'Disconnect source';
+    $('removeSlot').disabled = cameras.size < 2;
+    document.querySelectorAll('[data-source-type]').forEach((button) => buttonState(button, button.dataset.sourceType === type));
+    if (type === 'phone') renderPair(camera);
+    if (type === 'usb') {
+      $('usbQuality').value = camera.usb?.quality || '720';
+      $('usbMic').checked = camera.usb?.mic || false;
+      listDevices(camera.usb?.deviceId);
+      refreshUsbImage();
+      updateUsbPreview();
+    }
+    if (type === 'mjpeg') $('mjpegURL').value = camera.mjpeg;
+  }
+
+  function openSource(slot, type = 'phone') {
+    if (!cameras.has(slot)) return;
+    dialogSlot = slot;
+    const camera = cameras.get(slot);
+    $('sourceDialogTitle').textContent = camera.name + ' setup';
+    $('slotName').value = camera.name;
+    showSourceType(type);
+    $('sourceDialog').showModal();
+  }
+
+  async function listDevices(preferred) {
+    let devices;
+    try { devices = await navigator.mediaDevices?.enumerateDevices(); }
+    catch { return; }
+    if (sourceView !== 'usb') return;
+    const field = $('usbDevice');
+    const current = preferred || field.value;
+    while (field.options.length > 1) field.remove(1);
+    for (const [index, item] of (devices || []).filter((device) => device.kind === 'videoinput' && device.deviceId).entries()) {
+      field.add(new Option(item.label || 'Camera ' + (index + 1), item.deviceId));
+    }
+    field.value = [...field.options].some((option) => option.value === current) ? current : '';
+  }
+
+  async function connectUSB(camera, config, recovery = false) {
+    const token = {};
+    attempts.set(camera.slot, token);
+    let stream;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access needs HTTPS or localhost.');
+      const video = videoConstraints(config.quality);
+      if (config.deviceId) video.deviceId = { exact: config.deviceId };
+      stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+      let micFailed = false;
+      if (config.mic) {
+        try {
+          const mic = await navigator.mediaDevices.getUserMedia({ video: false, audio: audioConstraints() });
+          mic.getAudioTracks().forEach((track) => stream.addTrack(track));
+        } catch { micFailed = true; }
+      }
+      if (attempts.get(camera.slot) !== token || cameras.get(camera.slot) !== camera) { stopTracks(stream); return false; }
+      const activeTrack = liveTrack(stream, 'video');
+      if (!activeTrack) throw new Error('No video track was returned.');
+      disconnect(camera);
+      camera.kind = 'usb';
+      camera.ready = true;
+      camera.usb = { ...config, deviceId: activeTrack.getSettings().deviceId || config.deviceId };
+      camera.stream = stream;
+      camera.format = cameraFormat(activeTrack, 'USB camera');
+      camera.bitrate = profile(config.quality).bitrate;
+      activeTrack.addEventListener('ended', () => {
+        if (camera.stream !== stream) return;
+        stopTracks(stream);
+        camera.ready = false;
+        camera.stream = null;
+        refreshCamera(camera);
+        retryUSB(camera, 0);
+      });
+      for (const audio of stream.getAudioTracks()) {
+        audio.addEventListener('ended', () => {
+          if (camera.stream === stream) refreshCamera(camera);
+        });
+      }
+      useFirstProgram(camera);
+      refreshCamera(camera);
+      persist();
+      if (micFailed) notify('Camera connected. The microphone was unavailable.', true);
+      return true;
+    } catch (error) {
+      stopTracks(stream);
+      if (!recovery && attempts.get(camera.slot) === token) formError(captureError(error));
+      return false;
+    } finally {
+      if (attempts.get(camera.slot) === token) attempts.delete(camera.slot);
+    }
+  }
+
+  function retryUSB(camera, retry) {
+    if (retry > 3 || !camera.usb) return;
+    setTimeout(async () => {
+      if (cameras.get(camera.slot) !== camera || camera.kind !== 'usb' || camera.ready || attempts.has(camera.slot)) return;
+      if (!await connectUSB(camera, camera.usb, true)) retryUSB(camera, retry + 1);
+    }, [800, 1800, 3800, 7500][retry]);
+  }
+
+  function setMjpeg(camera, url) {
+    disconnect(camera);
+    camera.kind = 'mjpeg';
+    camera.url = url;
+    camera.mjpeg = url;
+    refreshCamera(camera);
+  }
+
+  function toggleRecording() {
+    if (recording) {
+      if (recording.state !== 'inactive') recording.stop();
+      return;
+    }
+    const camera = cameras.get(selected);
+    if (!camera?.ready || !camera.stream || !window.MediaRecorder) return;
+    try {
+      const tracks = ['video', 'audio'].map((kind) => liveTrack(camera.stream, kind)).filter(Boolean);
+      const recorder = new MediaRecorder(new MediaStream(tracks));
+      const chunks = [];
+      const name = camera.name.replace(/[^\p{L}\p{N}_ -]/gu, '').trim() || camera.slot;
+      recorder.ondataavailable = (event) => { if (event.data.size) chunks.push(event.data); };
+      recorder.onstop = () => {
+        recording = null;
+        refreshExtras();
+        if (!chunks.length) return;
+        const type = recorder.mimeType || chunks[0].type || 'video/webm';
+        const url = URL.createObjectURL(new Blob(chunks, { type }));
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = name + '-' + new Date().toISOString().replace(/[:.]/g, '-') + (type.startsWith('video/mp4') ? '.mp4' : '.webm');
+        anchor.click();
+        setTimeout(() => URL.revokeObjectURL(url), 10000);
+      };
+      recorder.onerror = () => notify('Clip recording was interrupted.', true);
+      recorder.start(1000);
+      recording = recorder;
+      refreshExtras();
+    } catch { notify('This camera could not be recorded by the browser.', true); }
+  }
+
+  $('quickPair').onclick = () => openSource(program || selected);
+  $('quickUSB').onclick = () => openSource(program || selected, 'usb');
+  $('programStandby').onclick = () => cut('');
+  $('programFull').onclick = () => fullscreen($('programView'));
+  $('programFraming').onclick = () => {
+    const panel = $('programFramingPanel');
+    panel.hidden = !panel.hidden;
+    const open = !panel.hidden;
+    $('programFraming').setAttribute('aria-expanded', String(open));
+    buttonState($('programFraming'), open);
+  };
+  $('programImageReset').onclick = () => {
+    programImage = imageSettings(null, true);
+    persist();
+    refreshProgramImage();
+    updateProgram();
+  };
+  $('multiFull').onclick = () => fullscreen($('tiles'));
+  $('multiviewColumns').value = multiviewColumns;
+  $('tiles').dataset.columns = multiviewColumns;
+  $('multiviewColumns').onchange = () => {
+    multiviewColumns = MULTIVIEW_LAYOUTS.includes($('multiviewColumns').value) ? $('multiviewColumns').value : 'auto';
+    $('tiles').dataset.columns = multiviewColumns;
+    persist();
+  };
+  $('audioMonitor').onclick = () => {
+    monitoring = !monitoring;
+    monitor.setMuted(!monitoring);
+    if (monitoring) monitor.play();
+    buttonState($('audioMonitor'), monitoring, monitoring ? 'Mute local monitoring' : 'Monitor Program audio', monitoring ? 'speaker' : 'mute');
+  };
+  $('copyProgram').onclick = () => copyObsOutput();
+  $('openProgram').onclick = () => window.open(obsUrl('', true), '_blank', 'noopener');
+  document.querySelectorAll('[data-add-slot]').forEach((button) => {
+    button.onclick = () => {
+      const slot = CAMERA_SLOTS.find((id) => !cameras.has(id));
+      if (!slot) return;
+      add(slot);
+      selected = slot;
+      syncCards();
+      persist();
+      openSource(slot, 'phone');
+    };
+  });
+  $('imageReset').onclick = () => resetSourceImage(cameras.get(selected));
+  $('usbImageReset').onclick = () => resetSourceImage(cameras.get(dialogSlot));
+  $('copyPair').onclick = () => copy($('pairURL').value, 'Pairing link copied');
+  $('pairURL').onclick = () => $('pairURL').select();
+  function clearSourcePreview() {
+    ++qrToken;
+    usbMonitor.display({ show: false });
+  }
+
+  function closeSource() {
+    clearSourcePreview();
+    $('sourceDialog').close();
+  }
+
+  $('sourceDialog').querySelector('[data-close]').onclick = closeSource;
+  $('sourceDialog').addEventListener('cancel', clearSourcePreview);
+  document.querySelectorAll('[data-source-type]').forEach((button) => {
+    button.onclick = () => showSourceType(button.dataset.sourceType);
+  });
+
+  $('renameForm').onsubmit = (event) => {
+    event.preventDefault();
+    const camera = cameras.get(dialogSlot);
+    const name = $('slotName').value.trim().slice(0, 36);
+    if (!name) { formError('Enter a display name.'); return; }
+    camera.name = name;
+    $('sourceDialogTitle').textContent = name + ' setup';
+    formError('');
+    refreshCamera(camera);
+    refreshSelection();
+    persist();
+  };
+
+  $('removeSlot').onclick = () => {
+    if (cameras.size < 2) return;
+    const camera = cameras.get(dialogSlot);
+    disconnect(camera);
+    const card = cards.get(dialogSlot);
+    card.tileMonitor.destroy();
+    card.row.remove();
+    card.tile.remove();
+    cards.delete(dialogSlot);
+    cameras.delete(dialogSlot);
+    if (program === dialogSlot) program = '';
+    if (selected === dialogSlot) selected = ordered()[0].slot;
+    closeSource();
+    syncCards();
+    persist();
+  };
+
+  $('disconnectSource').onclick = () => {
+    const camera = cameras.get(dialogSlot);
+    if (camera.link) {
+      const link = camera.link;
+      link.send({ type: 'stop' });
+      setTimeout(() => { if (camera.link === link) link.close(); }, 350);
+    } else {
+      disconnect(camera);
+      refreshCamera(camera);
+    }
+    $('disconnectSource').hidden = true;
+    persist();
+  };
+
+  $('usbBody').onsubmit = async (event) => {
+    event.preventDefault();
+    const camera = cameras.get(dialogSlot);
+    const button = event.submitter;
+    button.disabled = true;
+    formError('');
+    const connected = await connectUSB(camera, { deviceId: $('usbDevice').value, quality: $('usbQuality').value, mic: $('usbMic').checked });
+    button.disabled = false;
+    if (connected && dialogSlot === camera.slot && sourceView === 'usb' && $('sourceDialog').open) {
+      $('disconnectSource').hidden = false;
+      $('disconnectSource').textContent = 'Disconnect source';
+      updateUsbPreview();
+    }
+  };
+
+  $('usbDiscover').onclick = async () => {
+    const button = $('usbDiscover');
+    const slot = dialogSlot;
+    button.disabled = true;
+    formError('');
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      await listDevices();
+    } catch (error) {
+      if (slot === dialogSlot && sourceView === 'usb') formError(captureError(error));
+    } finally {
+      stopTracks(stream);
+      button.disabled = false;
+    }
+  };
+
+  $('mjpegBody').onsubmit = (event) => {
+    event.preventDefault();
+    const url = httpURL($('mjpegURL').value.trim());
+    if (!url) { formError('Enter a full HTTP or HTTPS URL without embedded credentials.'); return; }
+    const camera = cameras.get(dialogSlot);
+    setMjpeg(camera, url);
+    persist();
+    closeSource();
+  };
+
+  $('setupButton').onclick = () => {
+    $('setupNotice').hidden = !localPage() && location.protocol === 'https:';
+    $('setupNotice').textContent = 'For wireless cameras, serve this page over HTTPS and open that address before copying URLs.';
+    $('setupDialog').showModal();
+  };
+  $('setupCopy').onclick = () => $('copyProgram').click();
+  $('openPhoneSetup').onclick = () => window.open(makeUrl(room, 'phone', selected), '_blank', 'noopener');
+
+  $('roomButton').onclick = () => {
+    $('roomInput').value = room;
+    $('roomDialog').showModal();
+    $('roomInput').select();
+  };
+  $('roomForm').onsubmit = (event) => {
+    event.preventDefault();
+    const next = normalizeRoom($('roomInput').value.trim());
+    if (!next) return;
+    $('roomDialog').close();
+    if (next === room) return;
+    [...receiverLinks].forEach((link) => link.close());
+    signaler.close();
+    room = next;
+    const address = new URL(location.href);
+    if (address.searchParams.has('room')) {
+      address.searchParams.set('room', room);
+      try { history.replaceState(null, '', address); } catch { /* Keep saved room on restricted URLs. */ }
+    }
+    persist();
+    startRoom();
+    notify('Room changed. Use the new pairing and OBS links.');
+  };
+
+  document.addEventListener('keydown', (event) => {
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat ||
+        document.querySelector('dialog[open]') || event.target.closest?.('input, select, textarea, [contenteditable=true]')) return;
+    if (/^[1-9]$/.test(event.key) && cameras.get('CAM' + event.key)?.ready) cut('CAM' + event.key);
+  });
+  navigator.mediaDevices?.addEventListener?.('devicechange', () => {
+    if ($('sourceDialog').open && sourceView === 'usb') listDevices();
+    for (const camera of cameras.values()) if (camera.kind === 'usb' && !camera.ready) retryUSB(camera, 0);
+  });
+  addEventListener('pagehide', () => {
+    if (recording?.state === 'recording') recording.stop();
+    [...receiverLinks].forEach((link) => link.leave());
+    signaler.close();
+    for (const camera of cameras.values()) if (camera.kind === 'usb') stopTracks(camera.stream);
+  });
+  syncCards();
+  for (const camera of cameras.values()) if (camera.mjpeg) setMjpeg(camera, camera.mjpeg);
+  persist();
+  startRoom();
+}
+function cameraFormat(track, fallback) {
+  return videoFormat(track.getSettings(), fallback);
+}
+
+function videoFormat({ width, height, frameRate }, fallback) {
+  if (!width || !height) return fallback;
+  return width + ' × ' + height + (frameRate ? ' · ' + Math.round(frameRate) + ' fps' : '');
+}
+
+function reportedCapabilities(track) {
+  try { return track?.getCapabilities?.() || {}; } catch { return {}; }
+}
+
+function captureRate(value) {
+  return value === 'auto' ? 30 : Number(value);
+}
+
+function phoneVideoConstraints(frameRate) {
+  const nativeResize = navigator.mediaDevices?.getSupportedConstraints?.().resizeMode;
+  const constraints = { width: { ideal: profile('2160').width }, frameRate: { ideal: captureRate(frameRate) } };
+  if (nativeResize) constraints.resizeMode = { exact: 'none' };
+  return constraints;
+}
+
+function supportedPhoneQuality(quality, { width, height }) {
+  if (!width || !height || quality === PHONE_QUALITIES[0]) return true;
+  return Math.min(width, height) >= profile(quality).height && (quality !== '2160' || Math.max(width, height) >= profile(quality).width);
+}
+
+function phoneStreamFormat(preset, active) {
+  const { width, height, frameRate } = active;
+  if (!width || !height) return { frameRate, scale: 1 };
+  const scale = Math.max(1, Math.max(width, height) / preset.width, Math.min(width, height) / preset.height);
+  return { width: Math.floor(width / scale), height: Math.floor(height / scale), frameRate, scale };
+}
+
+function captureBitrate(preset, frameRate, active = {}) {
+  const { width, height, frameRate: actualRate } = active;
+  const pixels = width && height ? Math.min(1, width * height / (preset.width * preset.height)) : 1;
+  const frames = Math.max(0.65, Math.pow((actualRate || captureRate(frameRate)) / 30, 0.65));
+  return Math.round(Math.min(MAX_VIDEO_BITRATE, Math.max(250000, preset.bitrate * pixels * frames)));
+}
+
+const qualityLabel = (quality) => quality === '2160' ? '4K' : quality + 'p';
+
+const quarterAngle = (angle) => ((Math.round(angle / 90) * 90) % 360 + 360) % 360;
+const isQuarterTurn = (angle) => angle % 180 !== 0;
+
+function screenPose() {
+  const orientation = screen.orientation;
+  if (Number.isFinite(orientation?.angle) && /^(portrait|landscape)-/.test(orientation.type)) {
+    return { angle: quarterAngle(-orientation.angle), portrait: orientation.type.startsWith('portrait') };
+  }
+  if (Number.isFinite(window.orientation)) {
+    const angle = quarterAngle(-window.orientation);
+    return { angle, portrait: !isQuarterTurn(angle) };
+  }
+  return null;
+}
+
+function motionQuarter(beta, gamma) {
+  if (!Number.isFinite(beta) || !Number.isFinite(gamma)) return null;
+  const radians = Math.PI / 180;
+  const x = -Math.sin(gamma * radians) * Math.cos(beta * radians);
+  const y = Math.sin(beta * radians);
+  if (Math.hypot(x, y) < 0.55 || Math.min(Math.abs(x), Math.abs(y)) > 0.72 * Math.max(Math.abs(x), Math.abs(y))) return null;
+  return quarterAngle(-Math.atan2(x, y) / radians);
+}
+
+function fitKeyboardViewport() {
+  const viewport = window.visualViewport;
+  if (!viewport) return;
+  const root = document.documentElement;
+  let pending = 0;
+
+  function update() {
+    pending = 0;
+    const field = document.activeElement;
+    const editing = field?.matches('textarea, input:not([type]), input:is([type="text"],[type="search"],[type="url"],[type="email"],[type="tel"],[type="password"],[type="number"])');
+    const sheet = field?.closest('#phoneDialog[open]');
+    const edge = viewport.offsetTop + viewport.height;
+    const bottom = Math.round(Math.max(0, innerHeight - edge));
+    const shown = Boolean(editing && Math.abs(viewport.scale - 1) < 0.03 && bottom > 70);
+
+    if (shown) {
+      root.style.setProperty('--keyboard-bottom', bottom + 'px');
+      root.style.setProperty('--keyboard-viewport', Math.round(viewport.height) + 'px');
+      if (sheet) root.style.setProperty('--phone-keyboard-offset', Math.round(viewport.offsetTop) + 'px');
+    }
+    root.toggleAttribute('data-keyboard', shown);
+    if (shown && sheet) {
+      const dialogBounds = sheet.getBoundingClientRect();
+      const fieldBottom = field.getBoundingClientRect().bottom;
+      if (fieldBottom > dialogBounds.bottom - 12) sheet.scrollTop += fieldBottom - dialogBounds.bottom + 12;
+    }
+  }
+  const schedule = () => { if (!pending) pending = requestAnimationFrame(update); };
+  viewport.addEventListener('resize', schedule);
+  viewport.addEventListener('scroll', schedule);
+  document.addEventListener('focusin', schedule);
+  document.addEventListener('focusout', schedule);
+}
+
+
+function phone() {
+  const preferences = saved(PHONE_KEY);
+  const linkRoom = normalizeRoom(query.get('room'));
+  const storedConnection = preferences.connection || {};
+  let destination = {
+    room: linkRoom || normalizeRoom(storedConnection.room),
+    slot: normalizeSlot(linkRoom ? query.get('cam') : storedConnection.slot) || 'CAM1'
+  };
+  let autoPair = Boolean(destination.room && (linkRoom ? query.get('join') !== '0' : storedConnection.auto === true));
+  const identity = normalizeRoom(preferences.identity) || randomCode(16);
+  const preferredQuality = { '240': '360', '540': '480', '1440': '1080' }[preferences.quality] || preferences.quality;
+  let quality = PHONE_QUALITIES.includes(preferredQuality) ? preferredQuality : '720';
+  let frameRate = CAPTURE_RATES.includes(preferences.frameRate) ? preferences.frameRate : 'auto';
+  let settings = imageSettings(preferences.image);
+  let autoRotate = typeof preferences.autoRotate === 'boolean' ? preferences.autoRotate : settings.rotation === 0;
+  let automaticAngle = 0;
+  let framePose = null;
+  let screenReference = screenPose();
+  let orientationTimer;
+  let motionCandidate = null;
+  let motionAngle = null;
+  let motionTimer;
+  let motionGranted = false;
+  const canRequestMotion = typeof window.DeviceOrientationEvent?.requestPermission === 'function';
+  let capabilities = {};
+  let captureProblem = '';
+  let grid = preferences.grid === true;
+  let facing = 'environment';
+  let video = null;
+  let deviceStream = null;
+  let microphone = null;
+  let busy = false;
+  let micRequest = null;
+  let torchBusy = false;
+  let torchOn = false;
+  let session = null;
+  let pairingToken = null;
+  let confirmTimer;
+  let pairDeadline;
+  let videoDeadline;
+  let hostedBefore = false;
+  let studioLink = null;
+  let studioPipe = null;
+  let studioState = '';
+  const viewers = new Map();
+  let sending = false;
+  let hasSentVideo = false;
+  let copyObsTimer;
+  let linkMessage = '';
+  let linkTone = '';
+  let wakeLock = null;
+  let wakePending = false;
+  let recoverTimer;
+  let recoverStep = 0;
+  let openCamera = false;
+  let publishedVideo = null;
+  let publishedAudio = null;
+  let publishedStream = null;
+  let imageTimer = 0;
+
+  const monitor = new Monitor($('phoneView'), { change: (visible) => { $('phoneEmpty').hidden = visible; } });
+  const adjustmentButtons = [...$('phoneAdjustments').querySelectorAll('[data-adjust]')];
+  const refreshInspector = createInspector($('phoneImageControls'), () => settings, adjustImage, false, false, $('phoneAdjustRanges'), updateAdjustmentValues);
+  let shownAdjustment = '';
+  let toolsOpen = false;
+  for (const button of adjustmentButtons) {
+    const key = button.dataset.adjust;
+    const range = $('phoneImageControls-' + key);
+    range.labels[0].textContent = 'OBS ' + button.dataset.label;
+    button.onclick = () => showAdjustment(shownAdjustment === key ? '' : key, true);
+  }
+  showAdjustment('');
+  savePhone();
+
+  function showTools(open) {
+    toolsOpen = open;
+    $('phoneAdjustments').hidden = !open;
+    $('phoneTools').setAttribute('aria-expanded', String(open));
+    buttonState($('phoneTools'), open);
+    if (!open) showAdjustment('');
+  }
+
+  function showAdjustment(key, focus = false) {
+    shownAdjustment = key;
+    $('phoneAdjustPanel').hidden = !key;
+    for (const button of adjustmentButtons) {
+      const active = button.dataset.adjust === key;
+      button.setAttribute('aria-expanded', String(active));
+      buttonState(button, active);
+      $('phoneImageControls-' + button.dataset.adjust).closest('.adjustment').hidden = !active;
+    }
+    if (key && focus) $('phoneImageControls-' + key).focus({ preventScroll: true });
+  }
+
+  function updateAdjustmentValues() {
+    for (const button of adjustmentButtons) {
+      const value = $('phoneImageControls-' + button.dataset.adjust).previousElementSibling.textContent;
+      button.title = button.dataset.label + ' · ' + value;
+      button.setAttribute('aria-label', button.title);
+    }
+  }
+
+  function adjustImage(key, value, commit = true) {
+    settings[key] = value;
+    if (commit) savePhone();
+    if (!imageTimer) imageTimer = setTimeout(() => {
+      imageTimer = 0;
+      publish();
+    }, 32);
+  }
+
+  function savePhone() {
+    store(PHONE_KEY, { identity, quality, frameRate, image: settings, grid, autoRotate, connection: { ...destination, auto: autoPair } });
+  }
+
+  function refreshPreview() {
+    const rotation = activeRotation();
+    monitor.display({ stream: deviceStream });
+    $('phoneGrid').hidden = !grid || !deviceStream;
+
+    const { videoWidth: width, videoHeight: height } = monitor.video;
+    const orientation = deviceStream && width && height && width !== height
+      ? ((height > width) !== isQuarterTurn(rotation) ? 'Vertical' : 'Horizontal') : '';
+    const status = ['OBS', orientation, autoRotate ? 'Auto' : 'Locked', rotation + '°'].filter(Boolean).join(' · ');
+    if ($('phoneAngle').textContent !== status) {
+      $('phoneAngle').textContent = status;
+      const ratio = orientation === 'Vertical' ? '9:16' : orientation === 'Horizontal' ? '16:9' : '';
+      $('phoneAngleLabel').textContent = [ratio, autoRotate ? 'Auto' : rotation + '°'].filter(Boolean).join(' · ');
+      $('phoneRotate').setAttribute('aria-label', status + '. Rotate OBS feed 90 degrees and lock rotation.');
+    }
+    $('phoneRotate').title = 'Rotate OBS feed 90° and lock rotation';
+    $('phoneAutoRotate').checked = autoRotate;
+    $('phoneMotion').hidden = !autoRotate || !canRequestMotion || motionGranted;
+    $('phoneMotionStatus').hidden = !autoRotate || !$('phoneMotionStatus').textContent;
+  }
+
+  function activeRotation() {
+    return autoRotate ? automaticAngle : settings.rotation;
+  }
+
+  function scheduleOrientation() {
+    clearTimeout(orientationTimer);
+    orientationTimer = setTimeout(syncOrientation, 260);
+  }
+
+  function readCurrentScreen() {
+    const pose = screenPose();
+    if (pose && (screenReference?.angle !== pose.angle || screenReference?.portrait !== pose.portrait)) {
+      motionAngle = motionCandidate = null;
+      clearTimeout(motionTimer);
+    }
+    screenReference = pose;
+    return pose;
+  }
+
+  function syncOrientation() {
+    const pose = readCurrentScreen();
+    const width = monitor.video.videoWidth;
+    const height = monitor.video.videoHeight;
+    if (!pose || !video || !width || !height || width === height) return;
+
+    const naturalPortrait = pose.portrait !== isQuarterTurn(pose.angle);
+    const target = motionAngle === null ? pose : {
+      angle: motionAngle, portrait: naturalPortrait !== isQuarterTurn(motionAngle)
+    };
+    const portrait = height > width;
+    if (portrait === pose.portrait) {
+      framePose = pose;
+    } else if (framePose?.portrait !== portrait) {
+      // A browser may update the camera before it rotates the page.
+      const matchesMotion = motionAngle !== null && target.portrait === portrait;
+      framePose = matchesMotion ? target : { angle: portrait === naturalPortrait ? 0 : 90, portrait };
+    }
+    const next = quarterAngle(target.angle - framePose.angle);
+    if (next === automaticAngle) return;
+    automaticAngle = next;
+    if (autoRotate) {
+      refreshPreview();
+      publish();
+    }
+  }
+
+  function motionChanged(event) {
+    if (!autoRotate || !video) return;
+    readCurrentScreen();
+    const angle = motionQuarter(event.beta, event.gamma);
+    if (angle === null || angle === motionCandidate) return;
+    clearTimeout(motionTimer);
+    motionCandidate = angle;
+    motionTimer = setTimeout(() => {
+      motionAngle = angle;
+      syncOrientation();
+    }, 200);
+  }
+
+  function setAutoRotate(value) {
+    autoRotate = value;
+    motionAngle = motionCandidate = null;
+    clearTimeout(motionTimer);
+    syncOrientation();
+    savePhone();
+    refreshPreview();
+    publish();
+  }
+
+  async function enableMotion() {
+    const button = $('phoneMotion');
+    button.disabled = true;
+    try {
+      const result = await window.DeviceOrientationEvent.requestPermission();
+      motionGranted = result === 'granted';
+      $('phoneMotionStatus').textContent = motionGranted ? 'Motion access is on.' : 'Allow motion in browser settings or turn off your phone’s rotation lock.';
+    } catch {
+      $('phoneMotionStatus').textContent = 'Motion access is unavailable. Turn off your phone’s rotation lock or use Rotate.';
+    } finally {
+      $('phoneMotionStatus').hidden = false;
+      button.disabled = false;
+      refreshPreview();
+    }
+  }
+
+
+  function supportsTorch() {
+    return capabilities.torch === true;
+  }
+
+  function captureSettings() {
+    if (!video) return {};
+    const active = video.getSettings();
+    if ((!active.width || !active.height) && monitor.video.srcObject === deviceStream) {
+      return { ...active, width: monitor.video.videoWidth, height: monitor.video.videoHeight };
+    }
+    return active;
+  }
+
+  function activeQuality(active) {
+    return PHONE_QUALITIES.findLast((value) => Number(value) <= Number(quality) && supportedPhoneQuality(value, active));
+  }
+
+  function syncCaptureOptions() {
+    const active = captureSettings();
+    for (const option of $('phoneQuality').options) {
+      option.disabled = !supportedPhoneQuality(option.value, active);
+      option.textContent = qualityLabel(option.value) + (option.disabled ? ' (unavailable)' : '');
+    }
+    const { min = 0, max = Infinity } = capabilities.frameRate || {};
+    for (const option of $('phoneFrameRate').options) {
+      const rate = Number(option.value);
+      option.disabled = option.value !== 'auto' && (rate > max + 0.5 || rate < min - 0.5);
+      option.textContent = option.value === 'auto' ? 'Auto (prefer 30 fps)' : rate + ' fps' + (option.disabled ? ' (unavailable)' : '');
+    }
+    $('phoneQuality').value = activeQuality(active);
+    $('phoneFrameRate').value = frameRate;
+  }
+
+  function updateCaptureDisplay() {
+    const active = captureSettings();
+    const fps = active.frameRate;
+    const selected = activeQuality(active);
+    $('phoneFormat').textContent = video ? qualityLabel(selected) + (fps ? ' · ' + Math.round(fps) + ' fps' : '') : 'Capture';
+    $('phoneCaptureButton').setAttribute('aria-label', 'Capture settings' + (video ? '. Stream ' + $('phoneFormat').textContent : ''));
+    const output = phoneStreamFormat(profile(selected), active);
+    const note = video
+      ? 'Preview ' + videoFormat({ ...active, frameRate: undefined }, 'full frame') + ' · Stream up to ' + videoFormat(output, qualityLabel(selected))
+      : 'Enable the camera to see available resolutions.';
+    $('phoneCaptureSummary').textContent = captureProblem || note;
+  }
+
+  function updatePhone() {
+    const available = Boolean(video && video.readyState === 'live');
+    $('phoneTools').hidden = !available;
+    if (!available && toolsOpen) showTools(false);
+    const routes = [...viewers.values()].filter((viewer) => viewer.watching);
+    const paired = Boolean(studioPipe || viewers.size);
+    const ready = session?.signaler.ready;
+    if (session && !ready && !paired) startPairDeadline();
+    const states = [studioState, ...routes.map((viewer) => viewer.state)];
+    const transmitting = sending && available && states.includes('connected');
+    const waitingForVideo = sending && available && !transmitting && Boolean(studioPipe || routes.length);
+    if (transmitting) hasSentVideo = true;
+    trackVideoStart(waitingForVideo);
+    const failed = !session && linkTone === 'bad';
+    let status = failed ? 'Connection failed' : 'Unpaired';
+    let tone = failed ? 'bad' : '';
+    if (session) {
+      status = ready ? 'Waiting for OBS' : hostedBefore ? 'Reconnecting' : 'Pairing';
+      tone = linkTone || 'warn';
+    }
+    if (paired) {
+      status = 'Paired';
+      tone = 'good';
+    }
+    if (waitingForVideo) {
+      status = states.some((state) => ['failed', 'disconnected'].includes(state)) ? 'Reconnecting video' : 'Starting video';
+      tone = 'warn';
+    }
+    if (transmitting) {
+      status = 'Live';
+      tone = 'bad';
+    }
+    const form = formDestination();
+    const same = sameDestination(form);
+    const changesPending = Boolean(session && !same);
+    const target = destination.room
+      ? routeName(destination.slot) + ' · Room ' + destination.room
+      : 'Camera preview';
+    setSignal($('phoneStatus'), status, tone);
+    setSignal($('phoneConnectionStatus'), changesPending ? 'Changes pending' : status, changesPending ? 'warn' : tone);
+    $('phoneDestination').textContent = destination.room ? routeName(destination.slot) : 'Preview';
+    $('phoneDestination').title = target;
+    const standbyHint = available ? 'Tap Go live to send video.' : 'Enable the camera, then tap Go live.';
+    const waitingHint = ready && !paired ? 'Open this camera’s URL in OBS to pair.' : '';
+    const hint = changesPending ? status + ' · ' + target : linkMessage || (paired && !sending ? standbyHint : waitingHint);
+    $('phoneConnectionHint').textContent = hint;
+    $('phoneConnectionHint').hidden = !hint;
+    $('phoneConnect').disabled = same && Boolean(session);
+    $('phoneConnect').textContent = same && session ? (paired ? 'Connected' : ready ? 'Ready' : status + '…') : same && failed ? 'Retry' : 'Connect';
+    $('phoneCopyObs').disabled = !form.room;
+    $('phoneDisconnect').hidden = !session;
+    $('phoneRetry').hidden = !failed;
+    $('phoneLive').disabled = !sending && (!available || busy);
+    $('phoneLiveLabel').textContent = sending ? 'Stop sending' : 'Go live';
+    $('phoneLive').classList.toggle('transmitting', sending);
+    $('enableCamera').disabled = busy;
+    $('enableCamera').textContent = busy ? 'Opening…' : 'Enable camera';
+    $('swapLens').disabled = !available || busy || torchBusy;
+    $('phoneQuality').disabled = busy || torchBusy;
+    $('phoneFrameRate').disabled = busy || torchBusy;
+    $('phoneMic').disabled = Boolean(micRequest);
+    $('phoneTorch').disabled = busy || torchBusy || !supportsTorch();
+    updateCaptureDisplay();
+    $('turnOffCamera').disabled = !openCamera && !microphone;
+    buttonState($('phoneMic'), Boolean(microphone), microphone ? 'Mute microphone' : 'Enable microphone', microphone ? 'mic' : 'mic-off');
+    buttonState($('phoneTorch'), torchOn, supportsTorch() ? (torchOn ? 'Turn torch off' : 'Turn torch on') : 'Torch unavailable', 'bolt');
+  }
+
+  function setHint(message) {
+    $('phoneHint').textContent = message || '';
+    $('phoneHint').hidden = !message;
+  }
+
+  function publish() {
+    const routes = [...viewers.values()].filter((viewer) => viewer.pipe);
+    if (!studioPipe && !routes.length) return;
+    const nextVideo = sending && video?.readyState === 'live' ? video : null;
+    const nextAudio = nextVideo && microphone?.readyState === 'live' ? microphone : null;
+    if (publishedVideo !== nextVideo || publishedAudio !== nextAudio) {
+      publishedVideo = nextVideo;
+      publishedAudio = nextAudio;
+      publishedStream = nextVideo ? new MediaStream([nextVideo, nextAudio].filter(Boolean)) : null;
+    }
+    const active = captureSettings();
+    const preset = profile(activeQuality(active));
+    const output = phoneStreamFormat(preset, active);
+    const rate = captureBitrate(preset, frameRate, output);
+    const snapshot = {
+      kind: nextVideo ? 'video' : 'standby', image: { ...settings, rotation: activeRotation() }, audio: Boolean(nextAudio),
+      paused: !sending, format: nextVideo ? videoFormat(output, 'Camera active') : '',
+      torchSupported: supportsTorch(), torchOn, rate, bitrate: rate, scale: output.scale
+    };
+    studioPipe?.update(publishedStream, snapshot);
+    const idleCamera = !sending && hasSentVideo ? routeName(destination.slot) : '';
+    for (const viewer of routes) {
+      if (viewer.watching) viewer.pipe.update(publishedStream, { ...snapshot, paired: true, idleCamera });
+      else viewer.pipe.update(null, { kind: 'standby', paired: true });
+    }
+  }
+
+  function adopt(stream, requested) {
+    const previous = video;
+    const next = liveTrack(stream, 'video');
+    if (!next) { stopTracks(stream); throw new Error('Missing video track'); }
+    video = next;
+    framePose = null;
+    capabilities = reportedCapabilities(next);
+    captureProblem = '';
+    deviceStream = stream;
+    syncCaptureOptions();
+    facing = next.getSettings().facingMode || requested;
+    torchOn = false;
+    recoverStep = 0;
+    next.contentHint = 'motion';
+    next.addEventListener('ended', () => {
+      if (video !== next || !openCamera) return;
+      relinquishVideo();
+      setHint('Camera disconnected. Trying to restore the feed.');
+      updatePhone();
+      scheduleRecovery();
+    });
+    refreshPreview();
+    publish();
+    if (previous && previous !== video) previous.stop();
+    scheduleOrientation();
+    requestWakeLock();
+  }
+
+  function relinquishVideo() {
+    const old = video;
+    deviceStream = null;
+    video = null;
+    capabilities = {};
+    captureProblem = '';
+    syncCaptureOptions();
+    torchOn = false;
+    refreshPreview();
+    publish();
+    old?.stop();
+  }
+
+  async function acquire(requested, exact, recovery = false) {
+    if (busy || torchBusy) return false;
+    busy = true;
+    openCamera = true;
+    updatePhone();
+    const hadVideo = Boolean(video);
+    const previousFacing = facing;
+    const previousDevice = video?.getSettings().deviceId;
+    const constraints = phoneVideoConstraints(frameRate);
+    constraints.facingMode = { [exact ? 'exact' : 'ideal']: requested };
+    const gum = async (video) => {
+      try { return await navigator.mediaDevices.getUserMedia({ video, audio: false }); }
+      catch (error) {
+        if (!video.resizeMode || error.name !== 'OverconstrainedError' || error.constraint !== 'resizeMode') throw error;
+        const { resizeMode, ...fallback } = video;
+        return navigator.mediaDevices.getUserMedia({ video: fallback, audio: false });
+      }
+    };
+    let acquired;
+    try {
+      if (!navigator.mediaDevices?.getUserMedia) throw new Error('Secure context required');
+      try {
+        acquired = await gum(constraints);
+      } catch (error) {
+        if (!hadVideo || !['NotReadableError', 'AbortError'].includes(error.name)) throw error;
+        relinquishVideo();
+        acquired = await gum(constraints);
+      }
+      if (!openCamera) { stopTracks(acquired); return false; }
+      const candidate = liveTrack(acquired, 'video');
+      const actual = candidate?.getSettings();
+      if (exact && hadVideo && ((actual?.facingMode && actual.facingMode !== requested) ||
+          (!actual?.facingMode && previousDevice && actual?.deviceId === previousDevice))) {
+        stopTracks(acquired);
+        throw new DOMException('No alternate lens', 'NotFoundError');
+      }
+      adopt(acquired, requested);
+      setHint('');
+      return true;
+    } catch (error) {
+      if (exact && !video && openCamera && hadVideo) {
+        try {
+          const fallback = phoneVideoConstraints(frameRate);
+          if (previousDevice) fallback.deviceId = { exact: previousDevice };
+          else fallback.facingMode = { ideal: previousFacing };
+          const recovered = await gum(fallback);
+          if (openCamera) adopt(recovered, previousFacing);
+          else stopTracks(recovered);
+        } catch { scheduleRecovery(); }
+      }
+      if (openCamera && (!recovery || recoverStep >= 4)) {
+        const message = exact && ['NotFoundError', 'OverconstrainedError'].includes(error.name)
+          ? 'A second camera lens is unavailable.' : captureError(error);
+        setHint(message);
+        $('phoneEmptyTitle').textContent = 'Camera unavailable';
+        $('phoneEmptyText').textContent = message;
+      }
+      return false;
+    } finally {
+      busy = false;
+      updatePhone();
+    }
+  }
+
+  function scheduleRecovery() {
+    clearTimeout(recoverTimer);
+    if (!openCamera || video || recoverStep >= 4) return;
+    const delay = [650, 1400, 3200, 6500][recoverStep++];
+    recoverTimer = setTimeout(async () => {
+      if (openCamera && !video && !await acquire(facing, false, true)) scheduleRecovery();
+    }, delay);
+  }
+
+  async function toggleMic() {
+    if (micRequest) return;
+    if (microphone) {
+      const old = microphone;
+      microphone = null;
+      publish();
+      old.stop();
+      updatePhone();
+      return;
+    }
+    const request = {};
+    micRequest = request;
+    updatePhone();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: false, audio: audioConstraints() });
+      const track = liveTrack(stream, 'audio');
+      if (!track) throw new Error('No audio track');
+      if (micRequest !== request) { stopTracks(stream); return; }
+      microphone = track;
+      track.addEventListener('ended', () => {
+        if (microphone !== track) return;
+        microphone = null;
+        publish();
+        updatePhone();
+        setHint('The microphone disconnected.');
+      });
+      setHint('');
+      publish();
+    } catch (error) {
+      if (micRequest === request) setHint(error?.name === 'NotAllowedError' ? 'Microphone permission was denied.' : 'The microphone is unavailable.');
+    } finally {
+      if (micRequest === request) micRequest = null;
+      updatePhone();
+    }
+  }
+
+  async function toggleTorch() {
+    if (!supportsTorch() || torchBusy || busy) return;
+    const track = video;
+    torchBusy = true;
+    updatePhone();
+    try {
+      await track.applyConstraints({ ...track.getConstraints(), advanced: [{ torch: !torchOn }] });
+      if (video === track) {
+        torchOn = !torchOn;
+        publish();
+      }
+    } catch { setHint('This camera could not change its torch setting.'); }
+    finally { torchBusy = false; updatePhone(); }
+  }
+
+  async function changeCapture(nextQuality, nextRate) {
+    if (busy || torchBusy || !PHONE_QUALITIES.includes(nextQuality) || !CAPTURE_RATES.includes(nextRate) ||
+        (nextQuality === quality && nextRate === frameRate)) return;
+    const track = video;
+    const active = captureSettings();
+    if (nextQuality !== quality && !supportedPhoneQuality(nextQuality, active)) {
+      syncCaptureOptions();
+      return;
+    }
+    captureProblem = '';
+    if (track && nextRate !== frameRate) {
+      busy = true;
+      updatePhone();
+      try {
+        const rate = captureRate(nextRate);
+        const constraints = { ...track.getConstraints(), frameRate: { ideal: rate } };
+        if (nextRate !== 'auto') {
+          constraints.frameRate.min = rate - 0.5;
+          constraints.frameRate.max = rate + 0.5;
+        }
+        if (active.width && active.height) {
+          constraints.width = { exact: active.width };
+          constraints.height = { exact: active.height };
+        }
+        try { await track.applyConstraints(constraints); }
+        catch (error) {
+          if (error.name !== 'OverconstrainedError' || !['width', 'height'].includes(error.constraint) || !active.width || !active.height) throw error;
+          // Some phones report rotated settings but accept constraints in the sensor’s original orientation.
+          await track.applyConstraints({ ...constraints, width: constraints.height, height: constraints.width });
+        }
+        if (track !== video) return;
+        capabilities = reportedCapabilities(track);
+      } catch {
+        captureProblem = 'This frame rate is unavailable at the current camera format. The previous setting is still selected.';
+        return;
+      } finally {
+        busy = false;
+        syncCaptureOptions();
+        updatePhone();
+      }
+    }
+    quality = nextQuality;
+    frameRate = nextRate;
+    savePhone();
+    syncCaptureOptions();
+    updatePhone();
+    publish();
+  }
+
+  async function requestWakeLock() {
+    if (!openCamera || wakeLock || wakePending || document.visibilityState !== 'visible' || !navigator.wakeLock) return;
+    wakePending = true;
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      if (!openCamera) { await lock.release(); return; }
+      wakeLock = lock;
+      lock.addEventListener('release', () => { if (wakeLock === lock) wakeLock = null; });
+    } catch { /* Keep the camera usable when wake lock is unavailable. */ }
+    finally { wakePending = false; }
+  }
+
+  function syncAddress() {
+    const url = new URL(location.href);
+    url.searchParams.set('room', destination.room);
+    url.searchParams.set('cam', destination.slot);
+    url.searchParams.delete('route');
+    if (autoPair) url.searchParams.delete('join');
+    else url.searchParams.set('join', '0');
+    try { history.replaceState(null, '', url); } catch { /* The saved destination also works for local files. */ }
+  }
+
+  function formDestination() {
+    return {
+      room: normalizeRoom($('phoneRoom').value.trim()),
+      slot: normalizeSlot($('phoneSlot').value) || 'CAM1'
+    };
+  }
+
+  function sameDestination(value) {
+    return value.room === destination.room && value.slot === destination.slot;
+  }
+
+  function openPhoneSettings(focus) {
+    showTools(false);
+    $('phoneRoom').value = destination.room;
+    $('phoneSlot').value = destination.slot;
+    $('phoneDialog').showModal();
+    $('phoneDialog').scrollTop = 0;
+    if (focus) $(focus).focus();
+    updatePhone();
+  }
+
+  function trackVideoStart(waiting) {
+    if (!waiting) {
+      clearTimeout(videoDeadline);
+      videoDeadline = null;
+      return;
+    }
+    if (videoDeadline) return;
+    videoDeadline = setTimeout(() => {
+      videoDeadline = null;
+      stopSending();
+      linkMessage = 'Video couldn’t connect. Check your network and tap Go live to retry.';
+      setHint(linkMessage);
+      updatePhone();
+    }, PHONE_VIDEO_TIMEOUT);
+  }
+
+  function clearPairDeadline() {
+    clearTimeout(pairDeadline);
+    pairDeadline = null;
+  }
+
+  function startPairDeadline() {
+    if (pairDeadline) return;
+    pairDeadline = setTimeout(() => {
+      let message = linkTone === 'bad' && linkMessage
+        ? linkMessage : 'AirCast couldn’t reach the signaling server. Check your internet connection and tap Retry.';
+      if (navigator.onLine === false) message = 'Network offline. Reconnect to the internet and tap Retry.';
+      disconnectPhone(message);
+    }, PHONE_PAIR_TIMEOUT);
+  }
+
+  function detachPair() {
+    const previous = session;
+    pairingToken = session = null;
+    clearPairDeadline();
+    clearTimeout(confirmTimer);
+    trackVideoStart(false);
+    studioPipe?.close();
+    studioPipe = studioLink = null;
+    for (const [link, viewer] of viewers) {
+      viewer.pipe?.close();
+      link.leave();
+    }
+    viewers.clear();
+    hostedBefore = hasSentVideo = false;
+    publishedVideo = publishedAudio = publishedStream = null;
+    studioState = linkMessage = linkTone = '';
+    previous?.close();
+  }
+
+  function disconnectPhone(message = '') {
+    detachPair();
+    sending = autoPair = false;
+    if (destination.room) syncAddress();
+    savePhone();
+    linkMessage = message;
+    linkTone = message ? 'bad' : '';
+    setHint(message);
+    updatePhone();
+  }
+
+  function acceptViewer(connection, token) {
+    if (connection.metadata?.role !== 'direct-viewer' || normalizeSlot(connection.metadata?.slot) !== destination.slot) {
+      connection.close();
+      return;
+    }
+    const viewer = { watching: false, pipe: null, state: '' };
+    new Link(connection, {
+      open(link) {
+        if (token !== pairingToken) { link.close(); return; }
+        viewers.set(link, viewer);
+        updatePhone();
+      },
+      receive(message, link) {
+        if (viewers.get(link) !== viewer || token !== pairingToken) return;
+        if (message.type === 'watch' && viewer.watching !== (message.active === true)) {
+          viewer.watching = message.active === true;
+          if (viewer.watching && !viewer.pipe) {
+            viewer.pipe = new MediaPipe(link, true, {
+              state(state) {
+                if (viewers.get(link) !== viewer || token !== pairingToken) return;
+                viewer.state = state;
+                updatePhone();
+              }
+            });
+          }
+          publish();
+          updatePhone();
+        }
+        if (message.type === 'media') viewer.pipe?.accept(message);
+      },
+      close(link) {
+        viewer.pipe?.close();
+        viewers.delete(link);
+        if (token === pairingToken) updatePhone();
+      }
+    });
+  }
+
+  function connectPhone(next) {
+    if (!next.room || (session && sameDestination(next))) return;
+    detachPair();
+    destination = next;
+    autoPair = true;
+    syncAddress();
+    savePhone();
+    setHint('');
+    const token = {};
+    let slotInUse = false;
+    pairingToken = token;
+    startPairDeadline();
+
+    session = new ClientLink(endpoint(next.room), { role: 'phone', slot: next.slot, identity }, {
+      status(message, tone) {
+        if (pairingToken !== token || session?.signaler.ready) return;
+        if (message === 'Room already in use') slotInUse = true;
+        linkTone = slotInUse ? 'bad' : tone;
+        if (navigator.onLine === false) linkMessage = 'Network offline. AirCast will retry when it returns.';
+        else if (slotInUse) linkMessage = 'This camera slot is already in use. Close the other camera or choose another slot.';
+        else linkMessage = tone === 'bad' ? message : 'Contacting the signaling server…';
+        if (!studioPipe && !viewers.size) startPairDeadline();
+        updatePhone();
+      },
+      ready() {
+        if (pairingToken !== token) return;
+        clearPairDeadline();
+        slotInUse = false;
+        hostedBefore = true;
+        linkMessage = linkTone = '';
+        updatePhone();
+      },
+      open(active) {
+        if (pairingToken !== token) return;
+        studioLink = active;
+        confirmTimer = setTimeout(() => {
+          if (studioLink === active && !studioPipe) active.close();
+        }, 4500);
+      },
+      receive(message, active) {
+        if (studioLink !== active) return;
+        if (message.type === 'paired' && !studioPipe) {
+          clearTimeout(confirmTimer);
+          studioPipe = new MediaPipe(active, true, {
+            state(state) {
+              if (studioLink !== active) return;
+              studioState = state;
+              updatePhone();
+            }
+          });
+          publish();
+          updatePhone();
+        }
+        if (message.type === 'media') studioPipe?.accept(message);
+        if (message.type === 'torch' && studioPipe) toggleTorch();
+        if (message.type === 'occupied' || message.type === 'unknown-slot') session.retry = 3;
+        if (message.type === 'replaced') disconnectPhone('This slot was paired from another AirCast tab.');
+        if (message.type === 'stop') disconnectPhone('Camera Studio disconnected this camera.');
+      },
+      close(active) {
+        if (studioLink !== active) return;
+        clearTimeout(confirmTimer);
+        studioPipe?.close();
+        studioPipe = studioLink = null;
+        studioState = '';
+        updatePhone();
+      }
+    }, cameraEndpoint(next.room, next.slot));
+    session.signaler.accept = (connection) => acceptViewer(connection, token);
+    updatePhone();
+  }
+
+  function stopSending() {
+    sending = false;
+    publish();
+    if (session?.signaler.ready) linkMessage = '';
+    setHint('');
+    updatePhone();
+  }
+
+  function startSending() {
+    if (!video || sending) return;
+    if (!destination.room) { openPhoneSettings('phoneRoom'); return; }
+    sending = true;
+    if (!session) connectPhone(destination);
+    if (session?.signaler.ready) linkMessage = '';
+    setHint('');
+    publish();
+    updatePhone();
+  }
+
+  function leaveCamera(message = '') {
+    if (!session && !openCamera && !microphone && !micRequest) return;
+    disconnectPhone();
+    openCamera = false;
+    clearTimeout(recoverTimer);
+    clearTimeout(orientationTimer);
+    clearTimeout(motionTimer);
+    micRequest = null;
+    microphone?.stop();
+    microphone = null;
+    relinquishVideo();
+    wakeLock?.release().catch(() => {});
+    $('phoneEmptyTitle').textContent = 'Camera is off';
+    $('phoneEmptyText').textContent = 'Enable your camera to check the shot.';
+    setHint(message);
+    updatePhone();
+  }
+
+  for (const slot of CAMERA_SLOTS) $('phoneSlot').add(new Option(routeName(slot), slot));
+  $('phoneRoom').value = destination.room;
+  $('phoneSlot').value = destination.slot;
+  $('phoneConnectionForm').oninput = updatePhone;
+  $('phoneConnectionForm').onsubmit = (event) => {
+    event.preventDefault();
+    $('phoneRoom').blur();
+    connectPhone(formDestination());
+  };
+  $('phoneCopyObs').onclick = async () => {
+    const { room, slot } = formDestination();
+    if (room && await copy(makeUrl(room, 'obs', slot), routeName(slot) + ' OBS URL copied')) {
+      const label = $('phoneCopyObs').lastElementChild;
+      label.textContent = 'Copied';
+      clearTimeout(copyObsTimer);
+      copyObsTimer = setTimeout(() => { label.textContent = 'Copy OBS URL'; }, 2000);
+    }
+  };
+  $('phoneRetry').onclick = () => connectPhone(destination);
+  $('phoneDisconnect').onclick = () => disconnectPhone();
+  if (!destination.room) setHint('Open Camera settings to connect.');
+  $('enableCamera').onclick = () => { recoverStep = 0; acquire(facing, false); };
+  $('swapLens').onclick = () => acquire(facing === 'environment' ? 'user' : 'environment', true);
+  $('phoneLive').onclick = () => sending ? stopSending() : startSending();
+  $('phoneMic').onclick = toggleMic;
+  $('phoneTorch').onclick = toggleTorch;
+  $('phoneTools').onclick = () => showTools(!toolsOpen);
+  $('phoneView').onclick = () => { if (toolsOpen) showTools(false); };
+  $('phoneSettings').onclick = () => openPhoneSettings();
+  $('phoneCaptureButton').onclick = () => openPhoneSettings('phoneQuality');
+  $('phoneRotate').onclick = () => {
+    settings.rotation = quarterAngle(activeRotation() + 90);
+    autoRotate = false;
+    savePhone();
+    refreshPreview();
+    publish();
+  };
+  $('phoneAutoRotate').onchange = () => setAutoRotate($('phoneAutoRotate').checked);
+  $('phoneMotion').onclick = enableMotion;
+  for (const value of PHONE_QUALITIES) $('phoneQuality').add(new Option(qualityLabel(value), value));
+  for (const value of CAPTURE_RATES) $('phoneFrameRate').add(new Option('', value));
+  $('phoneQuality').onchange = () => changeCapture($('phoneQuality').value, frameRate);
+  $('phoneFrameRate').onchange = () => changeCapture(quality, $('phoneFrameRate').value);
+  syncCaptureOptions();
+  refreshPreview();
+  $('showGrid').checked = grid;
+  $('showGrid').onchange = () => { grid = $('showGrid').checked; savePhone(); refreshPreview(); };
+  $('phoneImageReset').onclick = () => { settings = imageSettings(null); savePhone(); refreshInspector(); refreshPreview(); publish(); };
+  $('turnOffCamera').onclick = () => { leaveCamera(); $('phoneDialog').close(); };
+  monitor.video.addEventListener('resize', () => { refreshPreview(); syncCaptureOptions(); updatePhone(); scheduleOrientation(); publish(); });
+  screen.orientation?.addEventListener?.('change', scheduleOrientation);
+  window.addEventListener('orientationchange', scheduleOrientation);
+  window.addEventListener('resize', () => {
+    const pose = screenPose();
+    if (pose && (pose.angle !== screenReference?.angle || pose.portrait !== screenReference?.portrait)) scheduleOrientation();
+  });
+  window.addEventListener('deviceorientation', motionChanged, { passive: true });
+  window.addEventListener('pagehide', () => leaveCamera());
+  navigator.mediaDevices?.addEventListener?.('devicechange', () => {
+    if (openCamera && !video && !busy) { recoverStep = 0; scheduleRecovery(); }
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      leaveCamera('Camera disconnected when you left this view.');
+      return;
+    }
+    if (autoPair && !session) connectPhone(destination);
+    requestWakeLock();
+  });
+  updatePhone();
+  if (autoPair && !document.hidden) connectPhone(destination);
+  else loadLibrary('Peer').catch(() => {});
+}
+function obsOutput() {
+  const roomParam = query.get('room');
+  const room = normalizeRoom(roomParam ?? query.get('obs'));
+  // Previously copied Direct Cam URLs are individual Studio feeds.
+  const legacy = roomParam !== null && query.get('obs') === 'direct';
+  const cameraNumber = query.get('c');
+  const rawSlot = query.get('cam') || (cameraNumber !== null ? 'CAM' + cameraNumber : legacy ? 'CAM1' : '');
+  const slot = normalizeSlot(rawSlot);
+  const mutedPreview = query.get('mute') === '1';
+  if (!room || (rawSlot && !slot)) return;
+  const fixedPairSlot = slot || normalizeSlot(query.get('pairCam'));
+  let pairSlot = fixedPairSlot || (roomParam === null || query.get('obs') === '1' ? '' : 'CAM1');
+  let renderedPairSlot;
+  const showPairing = query.get('pair') !== '0';
+  // Keep the sizing chosen by previously copied OBS URLs.
+  const legacyFormat = query.get('frame');
+  if (['horizontal', 'vertical'].includes(legacyFormat)) $('output').dataset.format = legacyFormat;
+  const feeds = new Map();
+  const standby = { kind: 'standby' };
+  let active = null;
+  let snapshot = standby;
+  let stream = null;
+  let onPresented;
+  let autoplayMuted = false;
+  let hasAired = false;
+  const monitor = slot ? new Monitor($('output'), { change: updateSlates }) : new DissolveMonitor($('output'), { change: updateSlates });
+  $('outputPairRoom').textContent = room;
+  $('outputPairKind').textContent = slot ? 'Camera feed' : 'Program';
+  updateSlates();
+
+  function renderPairTarget() {
+    const target = pairSlot;
+    renderedPairSlot = target;
+    $('outputPairCamera').textContent = target ? routeName(target) : 'Waiting for Studio';
+    const qr = $('outputPairQR');
+    const hint = $('outputPairHint');
+    const showManual = (message) => {
+      qr.hidden = true;
+      $('outputPairLayout').dataset.manual = 'true';
+      hint.textContent = message;
+    };
+    if (!target) {
+      showManual('Keep Camera Studio open to get the pairing code.');
+      return;
+    }
+    if (location.protocol !== 'https:' || localPage()) {
+      showManual('Open AirCast over HTTPS on your phone, enter these connection details, then tap Go live.');
+      return;
+    }
+    const url = makeUrl(room, 'phone', target);
+    qr.hidden = false;
+    delete $('outputPairLayout').dataset.manual;
+    hint.textContent = 'Scan the code, enable your camera, then tap Go live.';
+    const loading = document.createElement('small');
+    loading.textContent = 'Loading QR code…';
+    qr.replaceChildren(loading);
+    const currentTarget = () => pairSlot === target && renderedPairSlot === target;
+    loadLibrary('QRCode').then((QRCode) => {
+      if (!currentTarget()) return;
+      qr.replaceChildren();
+      new QRCode(qr, { text: url, width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+    }).catch(() => {
+      if (currentTarget()) {
+        renderedPairSlot = undefined;
+        showManual('Open AirCast on your phone, enter these connection details, then tap Go live.');
+      }
+    });
+  }
+
+  function updateSlates() {
+    const idle = $('outputIdle');
+    const name = snapshot.idleCamera;
+    const waitingToPair = snapshot.kind === 'standby' && !name && !snapshot.paired;
+    if (monitor.visible) hasAired = true;
+    else if (waitingToPair) hasAired = false;
+
+    const paused = Boolean(name && (snapshot.paired || hasAired));
+    const keepPaused = !idle.hidden && !waitingToPair;
+    const showIdle = Boolean(active && !monitor.visible && (paused || keepPaused));
+    if (showIdle && name) $('outputIdleStatus').textContent = name + ' · Paired';
+    idle.hidden = !showIdle;
+
+    const pair = $('outputPair');
+    pair.hidden = !showPairing || monitor.visible || showIdle;
+    if (!pair.hidden && renderedPairSlot !== pairSlot) renderPairTarget();
+  }
+
+  monitor.onMutedFallback = () => { autoplayMuted = true; };
+  document.addEventListener('pointerdown', () => {
+    if (mutedPreview) return;
+    autoplayMuted = false;
+    paint();
+    monitor.play();
+  });
+
+  function paint() {
+    const video = liveTrack(stream, 'video');
+    const muted = mutedPreview || autoplayMuted || snapshot.kind !== 'video' || !snapshot.audio;
+    if (slot) monitor.video.muted = muted;
+    monitor.display({
+      muted, onReady: onPresented,
+      stream: snapshot.kind === 'video' ? stream : null,
+      url: snapshot.kind === 'mjpeg' ? snapshot.url : '',
+      image: snapshot.image || BASE_IMAGE,
+      show: snapshot.kind === 'mjpeg' || (snapshot.kind === 'video' && Boolean(video && !video.muted))
+    });
+    updateSlates();
+  }
+
+  function selectFeed() {
+    const studio = feeds.get('studio');
+    const direct = feeds.get('direct');
+    const video = liveTrack(studio?.stream, 'video');
+    const studioReady = Boolean(studio && (studio.snapshot.kind === 'mjpeg' || studio.snapshot.idleCamera ||
+      (studio.snapshot.kind === 'video' && video && !video.muted)));
+
+    const watchDirect = !studioReady;
+    if (direct && direct.watching !== watchDirect) {
+      direct.watching = watchDirect;
+      if (!direct.watching) direct.snapshot = standby;
+      if (!direct.link.send({ type: 'watch', active: direct.watching })) return;
+    }
+
+    const directReady = direct && direct.snapshot !== standby;
+    const next = studioReady ? studio : directReady ? direct : studio || direct;
+    if (active !== (next?.link || null)) autoplayMuted = false;
+    active = next?.link || null;
+    snapshot = next?.snapshot || standby;
+    stream = next?.stream || null;
+    onPresented = next?.onPresented;
+    paint();
+  }
+
+  function parseSnapshot(value) {
+    const url = value.kind === 'mjpeg' ? httpURL(value.url) : '';
+    const kind = url ? 'mjpeg' : value.kind === 'video' ? 'video' : 'standby';
+    const idleCamera = kind === 'standby' && typeof value.idleCamera === 'string' ? value.idleCamera.trim().slice(0, 48) : '';
+    const availableSlot = normalizeSlot(value.pairSlot) || (kind === 'standby' && !pairSlot ? 'CAM1' : '');
+    if (!fixedPairSlot && availableSlot) pairSlot = availableSlot;
+    return { kind, url, audio: value.audio === true, image: outputImage(value.image), idleCamera, paired: value.paired === true };
+  }
+
+  function subscribe(route, target, role) {
+    return new ClientLink(target, { role, slot, smoothProgram: !slot }, {
+      open(link) {
+        const feed = { link, snapshot: standby, stream: null, watching: null };
+        feeds.set(route, feed);
+        feed.pipe = new MediaPipe(link, false, {
+          snapshot(value) {
+            if (feeds.get(route) !== feed || (route === 'direct' && !feed.watching)) return;
+            feed.snapshot = parseSnapshot(value);
+            selectFeed();
+          },
+          stream(value) {
+            if (feeds.get(route) !== feed) return;
+            feed.stream = value;
+            selectFeed();
+          }
+        });
+        selectFeed();
+      },
+      receive(message, link) {
+        const feed = feeds.get(route);
+        if (feed?.link !== link) return;
+        if (!slot && message.type === 'program') {
+          feed.program ||= new ProgramReceiver(link, {
+            parse: parseSnapshot,
+            cancel: () => monitor.cancelPending(),
+            show: ({ snapshot, stream }, onReady) => {
+              feed.snapshot = snapshot;
+              feed.stream = stream;
+              feed.onPresented = onReady;
+              selectFeed();
+            }
+          });
+          feed.program.accept(message);
+        } else if (message.type === 'media') {
+          if (message.programId) feed.program?.accept(message);
+          else feed.pipe.accept(message);
+        }
+      },
+      close(link) {
+        const feed = feeds.get(route);
+        if (feed?.link !== link) return;
+        feeds.delete(route);
+        feed.program?.close();
+        feed.pipe.close();
+        selectFeed();
+      }
+    });
+  }
+
+  const sessions = [subscribe('studio', endpoint(room), 'output')];
+  if (slot) sessions.push(subscribe('direct', cameraEndpoint(room, slot), 'direct-viewer'));
+  window.addEventListener('pagehide', () => sessions.forEach((session) => session.close()));
+}
+
+hydrateIcons();
+document.querySelectorAll('button[data-close]').forEach((button) => {
+  button.onclick = () => button.closest('dialog').close();
+});
+window.addEventListener('pageshow', (event) => { if (event.persisted) location.reload(); });
+if (view !== 'output') {
+  fitKeyboardViewport();
+  if (window.isSecureContext && /^https?:$/.test(location.protocol) && 'serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./aircast-sw.js').catch(() => {});
+  }
+}
+if (view === 'output') obsOutput();
+else if (view === 'phone') phone();
+else studio();
+</script>
+</body>
+</html>

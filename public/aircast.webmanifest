@@ -1,0 +1,20 @@
+{
+  "id": "./index.html",
+  "name": "AirCast Lite",
+  "short_name": "AirCast",
+  "description": "Wireless cameras and live switching for OBS Studio.",
+  "start_url": "./index.html?launch=app",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#111314",
+  "theme_color": "#111314",
+  "icons": [
+    { "src": "./aircast-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./aircast-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Phone camera", "url": "./index.html?mode=sender" },
+    { "name": "Camera Studio", "url": "./index.html" }
+  ]
+}
