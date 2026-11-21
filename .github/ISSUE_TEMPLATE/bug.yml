@@ -1,0 +1,14 @@
+name: Bug report
+description: Report a problem with AirCast Lite
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the steps, expected behavior, and actual behavior. Remove invitation URLs or tokens.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser, device, and OBS version

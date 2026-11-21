@@ -1,0 +1,10 @@
+name: Feature request
+description: Suggest an improvement to AirCast Lite
+body:
+  - type: textarea
+    id: workflow
+    attributes:
+      label: What are you trying to do?
+      description: Describe your workflow and what the change would help you accomplish.
+    validations:
+      required: true

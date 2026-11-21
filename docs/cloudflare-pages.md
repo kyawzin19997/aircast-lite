@@ -40,6 +40,26 @@ cd aircast-lite
 
 After editing the app, run the local smoke test described in the [README](../README.md#local-development), commit the changed files, and push `main`.
 
+## Enable private rooms
+
+The public workflow runs without bindings. To enable private rooms, deploy the room authority separately and bind it to the Pages application. Deploy while working in the cloned repository root:
+
+```sh
+npx wrangler@4.166.0 deploy --config infra/wrangler.toml
+```
+
+In the Pages project settings, add a **Durable Object namespace** binding named `ROOMS` for the `RoomAuthority` class in the `aircast-room-authority` Worker. Add it to each production or preview environment that should allow private rooms, then redeploy Pages. Only `/api/rooms` invokes the Pages Function. [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/get-started/) · [Pages bindings](https://developers.cloudflare.com/pages/functions/bindings/)
+
+Open Studio’s **Room** menu and choose **Create private room**. Choose a camera slot before issuing a contributor invitation. Share viewer links only with the intended viewers or OBS operators. Revoke unused links from the room menu. Private rooms expire after seven days. Keep the host browser tab or save its host recovery link to reopen it later.
+
+![AirCast Room dialog showing private invitation controls and host recovery](images/private-room.png)
+
+### Configure an optional TURN relay
+
+To use Cloudflare Realtime TURN with private rooms, create a TURN key and add its ID and API token as Pages secrets named `TURN_KEY_ID` and `TURN_KEY_API_TOKEN`. Redeploy after setting them. AirCast exchanges authenticated room sessions for expiring ICE credentials. The API token stays on the server. [Cloudflare TURN credential generation](https://developers.cloudflare.com/realtime/turn/generate-credentials/)
+
+For another TURN provider or a public-room deployment, configure a same-origin endpoint through `aircast-ice-endpoint` that returns the documented `iceServers` JSON response. Restrict access to the endpoint and keep long-lived provider credentials on the server. Test from a different network and check that diagnostics reports **Relayed** when a relay is needed.
+
 ## Troubleshooting
 
 | Symptom | Check |

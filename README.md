@@ -4,6 +4,16 @@ Turn a phone, USB webcam, or MJPEG camera into an OBS Browser Source. Use a came
 
 [Deploy with Cloudflare Pages](docs/cloudflare-pages.md)
 
+## Rooms and OBS outputs
+
+Open the **Room** menu in Studio to create a public room, join by ID or invitation, or open the standalone phone camera. Room settings are stored separately. Use **Add view** to configure up to 24 slots. The original shortcuts still cover slots 1–9.
+
+Open **Outputs** above Multiview to choose Program, an individual camera, or the Multiview grid. The manager gives you the Browser Source dimensions to enter in OBS and can add clean-feed, mute, and background settings to the link. Press **D** in an interactive output or choose **Connection diagnostics** in Camera settings to inspect status and video statistics.
+
+![AirCast OBS Output Manager showing options for a Multiview feed](docs/images/output-manager.png)
+
+Private rooms are available when the optional [room authority](docs/cloudflare-pages.md#enable-private-rooms) is configured. The host can issue a contributor invitation for a camera slot or a viewer invitation for an output. Use **Revoke** in the room menu to remove access. Existing public OBS links continue to work.
+
 ![AirCast Studio showing the live Program monitor, Multiview, and the Program framing controls](docs/images/studio.png)
 
 Screenshots show the running AirCast app with demonstration camera feeds.
@@ -28,7 +38,7 @@ Screenshots show the running AirCast app with demonstration camera feeds.
 ### Pair and operate a phone
 
 1. Scan the QR or open **Camera settings** on an existing phone page. Enter the same **Room ID** and select the desired **Camera** slot. Choose **Connect**.
-2. Tap **Enable camera**, then **Go live**. Use the capture chip to change stream resolution and frame rate. Available resolutions run from 360p to 4K, depending on the camera and browser.
+2. Tap **Enable camera**, then **Go live**. Use the capture chip to change stream resolution and frame rate. Available resolutions run from 360p to 4K, depending on the camera and browser. **Adapt quality to network** lets the browser balance stream quality and smoothness. **Use 360p for low bandwidth** selects the lowest stream preset.
 3. Tap the bottom-left sliders icon for zoom, brightness, and contrast. The rotate button turns the OBS feed by 90° and locks the angle. Re-enable **Auto-rotate video for OBS** in Camera settings to follow device orientation.
 4. **Stop sending** pauses video while the camera remains paired. **Disconnect** releases the slot and brings back the pairing screen. Leaving the phone camera page also releases the camera.
 
@@ -62,3 +72,5 @@ python -m http.server 8000 --directory public
 ```
 
 Open `http://localhost:8000/`. For phone pairing across devices and for the installable PWA, use the deployed HTTPS address. Cloudflare Pages serves the app shell. PeerJS handles signaling and WebRTC carries the camera feed.
+
+See [Contributing](CONTRIBUTING.md) for automated tests, [Architecture](docs/architecture.md) for source layout, and [Security](SECURITY.md) for room access and reporting. AirCast Lite is distributed under the [MIT License](LICENSE).
