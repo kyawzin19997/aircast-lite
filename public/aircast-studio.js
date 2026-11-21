@@ -38,7 +38,7 @@ function studio() {
   }
 
   initial.forEach((slot) => add(slot, restored.get(slot)));
-  const ordered = () => [...cameras.values()].sort((a, b) => slotNumber(a.slot) - slotNumber(b.slot));
+  const ordered = () => [...cameras.values()];
   selected = cameras.has(stored.selected) ? stored.selected : ordered()[0].slot;
   if (program && !cameras.has(program)) program = null;
 
@@ -195,6 +195,28 @@ function studio() {
       copyObsOutput(camera.slot);
     };
     const tileMonitor = new Monitor(tile.querySelector('.tile-stage'));
+    tile.dataset.slot = camera.slot;
+    const handle = document.createElement('button');
+    handle.type = 'button';
+    handle.className = 'btn ghost square tile-reorder';
+    handle.textContent = '⠿';
+    handle.title = 'Drag to reorder, or use an arrow key';
+    handle.setAttribute('aria-label', 'Reorder ' + routeName(camera.slot));
+    tile.querySelector('.tile-footer').prepend(handle);
+    handle.onclick = (event) => event.stopPropagation();
+    handle.onpointerdown = (event) => { if (event.button === 0) handle.setPointerCapture(event.pointerId); };
+    handle.onpointerup = (event) => {
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('#tiles .tile');
+      if (target) moveCamera(camera.slot, target.dataset.slot);
+    };
+    handle.onkeydown = (event) => {
+      const offset = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
+      if (!offset) return;
+      event.preventDefault();
+      const slots = [...cameras.keys()];
+      moveCamera(camera.slot, slots[slots.indexOf(camera.slot) + offset]);
+      handle.focus();
+    };
     tileMonitor.onImageState = (ready, url) => {
       if (camera.kind !== 'mjpeg' || camera.url !== url || (camera.ready === ready && camera.failed === !ready)) return;
       camera.ready = ready;
@@ -204,6 +226,19 @@ function studio() {
     };
 
     cards.set(camera.slot, { row, tile, tileMonitor });
+  }
+
+  function moveCamera(slot, target) {
+    if (!target || slot === target) return;
+    const items = ordered();
+    const targetIndex = items.findIndex((camera) => camera.slot === target);
+    if (targetIndex < 0) return;
+    items.splice(items.indexOf(cameras.get(slot)), 1);
+    items.splice(targetIndex, 0, cameras.get(slot));
+    cameras.clear();
+    for (const camera of items) cameras.set(camera.slot, camera);
+    persist();
+    syncCards();
   }
 
   function syncCards() {
@@ -458,12 +493,19 @@ function studio() {
         }
       });
       receiverLinks.add(link);
-    } else if (metadata.role === 'phone' && slot) {
-      const camera = cameras.get(slot);
+    } else if (metadata.role === 'phone' && (slot || (metadata.slot === '' && normalizeRoom(metadata.identity)))) {
+      let camera;
       let pipe;
       const phone = new Link(connection, {
         open: (link) => {
-          if (!camera || cameras.get(slot) !== camera) { rejectPair(link, 'unknown-slot'); return; }
+          camera = slot ? cameras.get(slot)
+            : ordered().find((item) => item.link?.connection.metadata.identity === metadata.identity)
+              || ordered().find((item) => !item.kind && !attempts.has(item.slot));
+          if (!camera && !slot) {
+            const available = CAMERA_SLOTS.find((id) => !cameras.has(id));
+            if (available) { camera = add(available); persist(); syncCards(); }
+          }
+          if (!camera) { rejectPair(link, slot ? 'unknown-slot' : 'room-full'); return; }
           const prior = camera.link;
           const occupied = camera.kind && camera.kind !== 'phone';
           if (occupied || (prior && prior.connection.metadata?.identity !== metadata.identity)) {
@@ -510,7 +552,7 @@ function studio() {
               updatePhoneReadiness();
             }
           });
-          link.send({ type: 'paired' });
+          link.send({ type: 'paired', slot: camera.slot });
           refreshCamera(camera);
         },
         receive: (message, link) => { if (camera?.link === link && message.type === 'media') pipe?.accept(message); },
@@ -739,6 +781,12 @@ function studio() {
     buttonState($('audioMonitor'), monitoring, monitoring ? 'Mute local monitoring' : 'Monitor Program audio', monitoring ? 'speaker' : 'mute');
   };
   $('copyProgram').onclick = () => copyObsOutput();
+  $('copyRoomId').onclick = () => copy(room, 'Room ID copied');
+  $('copyInvitation').onclick = () => {
+    const url = new URL(makeUrl(room, 'phone'));
+    url.searchParams.set('auto', '1');
+    copy(url.href, 'Camera invitation copied');
+  };
   $('openProgram').onclick = () => previewObsOutput('', true);
   document.querySelectorAll('[data-add-slot]').forEach((button) => {
     button.onclick = () => {

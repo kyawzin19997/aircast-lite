@@ -23,7 +23,8 @@ const AirCastRooms = (() => {
       if (role === 'contributor') {
         url.searchParams.set('mode', 'sender');
         url.searchParams.set('room', code);
-        url.searchParams.set('cam', camera || 'CAM1');
+        if (camera) url.searchParams.set('cam', camera);
+        else url.searchParams.set('auto', '1');
       } else {
         url.searchParams.set('obs', code);
       }

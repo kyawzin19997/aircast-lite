@@ -70,7 +70,6 @@
     <form id="joinForm">
       <label class="field">Room ID or invitation link<input type="text" id="joinValue" maxlength="2048" autocomplete="off" required></label>
       <label class="field">Join as<select id="joinRole"><option value="contributor">Camera contributor</option><option value="viewer">Program viewer</option></select></label>
-      <label class="field" id="joinSlotField">Camera<select id="joinSlot"></select></label>
       <button class="btn accent" type="submit">Join</button>
     </form>
     <form id="roomPasswordForm" hidden>
@@ -93,7 +92,9 @@
   </div></header>
   <main class="workspace">
     <div class="spread workspace-heading">
-      <div><h1>Camera studio</h1><p>Switch live cameras in Program or send individual feeds to OBS.</p></div>
+      <div><h1>Camera studio</h1><p>Switch live cameras in Program or send individual feeds to OBS.</p>
+        <div class="group room-share"><button class="btn" id="copyInvitation">Copy invitation link</button><button class="btn ghost" id="copyRoomId">Copy Room ID</button></div>
+      </div>
       <div class="room-expiry" id="roomExpiryStatus" hidden><span>Room expires in</span><time id="roomCountdown" class="mono" role="timer"></time></div>
     </div>
     <div class="studio-grid">

@@ -400,6 +400,9 @@ html[data-keyboard][data-view=phone] #phoneDialog[open] {
 #sourceDialog > .modal-body { flex: 1; min-height: 0; overflow: auto; align-content: start; }
 #createRoomId { text-transform: uppercase; }
 #roomCode { max-width: min(33ch, 38vw); }
+.room-share { margin-top: 12px; flex-wrap: wrap; }
+.tile-reorder { cursor: grab; touch-action: none; }
+.tile-reorder:active { cursor: grabbing; }
 .room-expiry { display: grid; gap: 3px; flex: none; text-align: right; font-size: .8rem; color: var(--quiet); }
 .room-expiry time { color: var(--text); font-variant-numeric: tabular-nums; }
 .usb-framing { display: grid; gap: 12px; padding-top: 13px; border-top: 1px solid var(--line); }

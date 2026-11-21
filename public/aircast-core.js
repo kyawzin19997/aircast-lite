@@ -143,7 +143,7 @@ function openNamespace(room) {
 }
 
 const incomingCaps = new WeakMap();
-const packetTypes = new Set(['leave','ping','pong','media','program','paired','occupied','unknown-slot','replaced','stop','torch','watch','layout']);
+const packetTypes = new Set(['leave','ping','pong','media','program','paired','occupied','unknown-slot','room-full','replaced','stop','torch','watch','layout']);
 
 function validControlPacket(value) {
   if (!value || typeof value !== 'object' || !packetTypes.has(value.type)) return false;

@@ -107,14 +107,15 @@ function fitKeyboardViewport() {
 function phone() {
   const preferences = saved(PHONE_KEY);
   const linkRoom = normalizeRoom(query.get('room'));
-  if (roomAccess) $('phoneRoom').readOnly = $('phoneSlot').disabled = true;
+  const assignedByStudio = query.get('auto') === '1';
+  if (roomAccess || assignedByStudio) $('phoneRoom').readOnly = $('phoneSlot').disabled = true;
   const storedConnection = preferences.connection || {};
   let destination = {
     room: linkRoom || normalizeRoom(storedConnection.room),
     slot: normalizeSlot(linkRoom ? query.get('cam') : storedConnection.slot) || 'CAM1'
   };
   let autoPair = Boolean(destination.room && (linkRoom ? query.get('join') !== '0' : storedConnection.auto === true));
-  const identity = normalizeRoom(preferences.identity) || randomCode(16);
+  const identity = (assignedByStudio ? '' : normalizeRoom(preferences.identity)) || randomCode(16);
   const preferredQuality = { '240': '360', '540': '480', '1440': '1080' }[preferences.quality] || preferences.quality;
   let quality = PHONE_QUALITIES.includes(preferredQuality) ? preferredQuality : '720';
   let frameRate = CAPTURE_RATES.includes(preferences.frameRate) ? preferences.frameRate : 'auto';
@@ -415,15 +416,16 @@ function phone() {
       : 'Camera preview';
     setSignal($('phoneStatus'), status, tone);
     setSignal($('phoneConnectionStatus'), changesPending ? 'Changes pending' : status, changesPending ? 'warn' : tone);
-    $('phoneDestination').textContent = destination.room ? routeName(destination.slot) : 'Preview';
+    $('phoneDestination').textContent = assignedByStudio && !paired ? 'Waiting for Studio' : destination.room ? routeName(destination.slot) : 'Preview';
     $('phoneDestination').title = target;
     const standbyHint = available ? 'Tap Go live to send video.' : 'Enable the camera, then tap Go live.';
-    const waitingHint = ready && !paired ? 'Open this camera’s URL in OBS to pair.' : '';
+    const waitingHint = ready && !paired ? (assignedByStudio ? 'Keep Camera Studio open to assign this camera.' : 'Open this camera’s URL in OBS to pair.') : '';
     const hint = changesPending ? status + ' · ' + target : linkMessage || (paired && !sending ? standbyHint : waitingHint);
     $('phoneConnectionHint').textContent = hint;
     $('phoneConnectionHint').hidden = !hint;
     $('phoneConnect').disabled = same && Boolean(session);
     $('phoneConnect').textContent = same && session ? (paired ? 'Connected' : ready ? 'Ready' : status + '…') : same && failed ? 'Retry' : 'Connect';
+    $('phoneCopyObs').hidden = assignedByStudio;
     $('phoneCopyObs').disabled = !form.room;
     $('phoneDisconnect').hidden = !session;
     $('phoneRetry').hidden = !failed;
@@ -707,7 +709,7 @@ function phone() {
   function syncAddress() {
     const url = new URL(location.href);
     url.searchParams.set('room', destination.room);
-    url.searchParams.set('cam', destination.slot);
+    if (!assignedByStudio) url.searchParams.set('cam', destination.slot);
     url.searchParams.delete('route');
     if (autoPair) url.searchParams.delete('join');
     else url.searchParams.set('join', '0');
@@ -835,7 +837,8 @@ function phone() {
   }
 
   function connectPhone(next) {
-    if (roomAccess && (next.room !== linkRoom || next.slot !== roomAccess.slot)) return;
+    if ((roomAccess || assignedByStudio) && next.room !== linkRoom) return;
+    if (roomAccess && !assignedByStudio && next.slot !== roomAccess.slot) return;
     if (!next.room || (session && sameDestination(next))) return;
     detachPair();
     destination = next;
@@ -848,7 +851,7 @@ function phone() {
     pairingToken = token;
     startPairDeadline();
 
-    session = new ClientLink(endpoint(next.room), { role: 'phone', slot: next.slot, identity }, {
+    session = new ClientLink(endpoint(next.room), { role: 'phone', slot: assignedByStudio ? '' : next.slot, identity }, {
       status(message, tone) {
         if (pairingToken !== token || session?.signaler.ready) return;
         if (message === 'Room already in use') slotInUse = true;
@@ -877,6 +880,11 @@ function phone() {
       receive(message, active) {
         if (studioLink !== active) return;
         if (message.type === 'paired' && !studioPipe) {
+          if (assignedByStudio) {
+            const slot = normalizeSlot(message.slot);
+            if (!slot) { active.close(); return; }
+            destination.slot = $('phoneSlot').value = slot;
+          }
           clearTimeout(confirmTimer);
           studioPipe = new MediaPipe(active, true, {
             state(state) {
@@ -891,6 +899,7 @@ function phone() {
         if (message.type === 'media') studioPipe?.accept(message);
         if (message.type === 'torch' && studioPipe) toggleTorch();
         if (message.type === 'occupied' || message.type === 'unknown-slot') session.retry = 3;
+        if (message.type === 'room-full') { session.retry = 3; linkMessage = 'Studio has no free camera slots.'; updatePhone(); }
         if (message.type === 'replaced') disconnectPhone('This slot was paired from another AirCast tab.');
         if (message.type === 'stop') disconnectPhone('Camera Studio disconnected this camera.');
       },
@@ -902,8 +911,8 @@ function phone() {
         studioState = '';
         updatePhone();
       }
-    }, cameraEndpoint(next.room, next.slot));
-    session.signaler.accept = (connection) => acceptViewer(connection, token);
+    }, assignedByStudio ? undefined : cameraEndpoint(next.room, next.slot));
+    if (!assignedByStudio) session.signaler.accept = (connection) => acceptViewer(connection, token);
     updatePhone();
   }
 

@@ -8,6 +8,8 @@ Turn a phone, USB webcam, or MJPEG camera into an OBS Browser Source. Use a came
 
 Select **Create room** on the home page. Enter a custom Room ID of 3–16 letters or numbers, or leave it blank to generate one. The optional expiration appears as a live countdown in Studio. To invite someone, share a camera pairing link or the copied Program link. New Studio URLs open in the browser that created the room.
 
+In Studio, **Copy invitation link** gives phone contributors a link that assigns the next free slot while Studio is open. **Copy Room ID** copies the ID for manual joining. Use a slot’s QR for a specific camera and **Copy OBS URL** for Program viewers. Drag the grip on a Multiview tile, or focus it and press an arrow key, to change the layout order.
+
 ![AirCast home page with optional room password and expiration settings](docs/images/room-home.png)
 
 Add the **Program** URL to OBS once. Select **Multiview** in Studio’s Program controls to show the same camera grid in Studio’s Program monitor and the OBS source. Select **Back to Program** to return both to the selected camera. Multiview carries audio from the selected Program camera. Use **Add view** to configure up to 24 slots.

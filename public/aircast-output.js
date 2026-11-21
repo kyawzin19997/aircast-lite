@@ -9,7 +9,7 @@ function multiviewOutput(room, configuredSlots, configuredColumns, grid = docume
   const existing = new Map(Array.from(grid.children, (tile) => [tile.dataset.slot, tile]));
   for (const [slot, tile] of existing) if (!slots.includes(slot)) tile.remove();
   for (const [index, slot] of slots.entries()) {
-    if (existing.has(slot)) continue;
+    if (existing.has(slot)) { existing.get(slot).style.order = index; continue; }
     const url = new URL(makeUrl(room, 'obs', slot, true));
     url.searchParams.set('studio', '1');
     url.searchParams.set('slate', 'off');
@@ -17,9 +17,10 @@ function multiviewOutput(room, configuredSlots, configuredColumns, grid = docume
     const tile = document.createElement('iframe');
     tile.title = routeName(slot);
     tile.dataset.slot = slot;
+    tile.style.order = index;
     tile.allow = 'autoplay';
     tile.src = url.href;
-    grid.insertBefore(tile, grid.children[index] || null);
+    grid.append(tile);
   }
   return grid;
 }

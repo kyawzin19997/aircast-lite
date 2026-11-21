@@ -18,12 +18,11 @@ const aliasKey = (room) => 'aircast-custom-id:' + room;
 function joinRoom() {
   const code = normalizeRoom(query.get('join'));
   if (code) $('joinValue').value = code;
-  $('joinSlot').replaceChildren(...CAMERA_SLOTS.map((slot) => new Option(routeName(slot), slot)));
-  $('joinRole').onchange = () => { $('joinSlotField').hidden = $('joinRole').value !== 'contributor'; };
   $('createRoom').onclick = () => {
     const form = $('createRoomForm');
-    form.hidden = !form.hidden;
-    $('createRoom').setAttribute('aria-expanded', String(!form.hidden));
+    form.hidden = false;
+    $('createRoom').hidden = true;
+    $('createRoomId').focus();
   };
   $('createRoomForm').onsubmit = async (event) => {
     event.preventDefault();
@@ -72,7 +71,7 @@ function joinRoom() {
   $('joinForm').onsubmit = async (event) => {
     event.preventDefault();
     const text = $('joinValue').value;
-    const url = AirCastRooms.joinTarget(text, location.href, $('joinRole').value, $('joinSlot').value);
+    const url = AirCastRooms.joinTarget(text, location.href, $('joinRole').value);
     if (!url) { $('joinFeedback').textContent = 'Enter a room ID or paste an invitation from this AirCast site.'; return; }
     const code = normalizeRoom(text.trim());
     try {
@@ -149,7 +148,7 @@ function showRoom(route) {
 
 async function boot(password) {
   const target = view === 'output' ? AirCastRooms.output(query) : {
-    room: normalizeRoom(query.get('room')), slot: normalizeSlot(query.get('cam')) || 'CAM1'
+    room: normalizeRoom(query.get('room')), slot: query.get('auto') === '1' ? '' : normalizeSlot(query.get('cam')) || 'CAM1'
   };
   const sealed = query.get('sealed') === '1';
   try {

@@ -113,9 +113,38 @@ test('Program switches to Multiview on the same URL and new rooms start empty', 
   const join = await context.newPage();
   await join.goto('/?join=' + first);
   await expect(join.locator('#joinValue')).toHaveValue(first);
-  await join.locator('#joinSlot').selectOption('CAM20');
   await join.locator('#joinForm [type=submit]').click();
-  await expect(join).toHaveURL(/mode=sender.*cam=CAM20/);
+  await expect(join).toHaveURL(/mode=sender.*auto=1/);
+});
+
+test('an invitation assigns a contributor to Studio and tile order survives reload', async ({ context }) => {
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText: async (text) => { window.copied = text; } } });
+  });
+  const studio = await context.newPage();
+  const room = code();
+  await studio.goto('/?room=' + room);
+  await studio.locator('#copyRoomId').click();
+  expect(await studio.evaluate(() => window.copied)).toBe(room);
+  await studio.locator('#copyInvitation').click();
+  const invitation = await studio.evaluate(() => window.copied);
+  expect(invitation).toContain('auto=1');
+  const phone = await context.newPage();
+  await startCamera(phone, room, '', invitation);
+  await expect(studio.locator('#sourceList .source-row').first()).toContainText('Live');
+  await studio.getByRole('button', { name: 'Reorder CAM 1' }).press('ArrowRight');
+  await expect(studio.locator('#tiles .tile').first()).toHaveAttribute('data-slot', 'CAM2');
+  const thirdGrip = studio.getByRole('button', { name: 'Reorder CAM 3' });
+  await thirdGrip.scrollIntoViewIfNeeded();
+  const grip = await thirdGrip.boundingBox();
+  const target = await studio.locator('#tiles .tile').first().boundingBox();
+  await studio.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await studio.mouse.down();
+  await studio.mouse.move(target.x + target.width / 2, target.y + target.height / 2, { steps: 8 });
+  await studio.mouse.up();
+  await expect(studio.locator('#tiles .tile').first()).toHaveAttribute('data-slot', 'CAM3');
+  await studio.reload();
+  await expect(studio.locator('#tiles .tile').first()).toHaveAttribute('data-slot', 'CAM3');
 });
 
 test('stored encrypted rooms ask the phone for a password while OBS displays and receives without one', async ({ context }) => {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.3
+
+- Added invitation and Room ID copy controls in Studio.
+- Assigned invited camera contributors to free Studio slots automatically.
+- Made Multiview reorderable by drag or arrow keys.
+
 ## 2.2.2
 
 - Added custom Room IDs, duplicate registration checks, and a creator-browser check for new Studio URLs.
