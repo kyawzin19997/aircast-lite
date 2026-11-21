@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.1
+
+- Preserved transparency around live video when the Output Manager selects a transparent background.
+
 ## 2.0.0
 
 - Added Create Room, Join Room, and Direct Camera entry points, plus separate public-room settings and up to 24 camera slots.

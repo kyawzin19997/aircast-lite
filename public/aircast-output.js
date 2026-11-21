@@ -15,6 +15,7 @@ function multiviewOutput(room) {
     const url = new URL(makeUrl(room, 'obs', slot, true));
     url.searchParams.set('studio', '1');
     url.searchParams.set('slate', 'off');
+    url.searchParams.set('bg', 'transparent');
     const tile = document.createElement('iframe');
     tile.title = routeName(slot);
     tile.allow = 'autoplay';
@@ -34,7 +35,8 @@ function obsOutput() {
   let renderedPairSlot;
   const cleanFeed = query.get('slate') === 'off';
   const showPairing = !cleanFeed && query.get('pair') !== '0';
-  $('output').dataset.background = query.get('bg') === 'black' ? 'black' : 'transparent';
+  const background = query.get('bg');
+  if (background === 'black' || background === 'transparent') $('output').dataset.background = background;
   // Keep the sizing chosen by previously copied OBS URLs.
   const legacyFormat = query.get('frame');
   if (['horizontal', 'vertical'].includes(legacyFormat)) $('output').dataset.format = legacyFormat;

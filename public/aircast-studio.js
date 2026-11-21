@@ -55,7 +55,7 @@ function studio() {
       if (multiviewColumns !== 'auto') url.searchParams.set('columns', multiviewColumns);
     }
     if (options.clean) url.searchParams.set('slate', 'off');
-    if (options.black) url.searchParams.set('bg', 'black');
+    if (typeof options.black === 'boolean') url.searchParams.set('bg', options.black ? 'black' : 'transparent');
     if (options.frame) url.searchParams.set('frame', options.frame);
     if (!roomAccess) return url.href;
     const { secret } = await roomAccess.request('invite', { role: 'viewer', slot: multiview ? '' : slot });

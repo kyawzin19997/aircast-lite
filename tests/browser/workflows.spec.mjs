@@ -22,13 +22,16 @@ async function startCamera(page, room, slot, address) {
 test('legacy and current camera outputs play with Studio closed and reconnect', async ({ context }) => {
   const room = code();
   const output = await context.newPage();
-  await output.goto('/?obs=' + room + '&c=1&slate=off');
+  await output.goto('/?obs=' + room + '&c=1&slate=off&bg=transparent');
   const phone = await context.newPage();
   await startCamera(phone, room, 'CAM1');
   await expect(output.locator(video)).toBeVisible({ timeout:15000 });
+  await expect(output.locator('#output')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+  await expect(output.locator('.dissolve-layer').first()).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
   const legacy = await context.newPage();
   await legacy.goto('/?room=' + room + '&obs=direct&cam=CAM1');
   await expect(legacy.locator(video)).toBeVisible({ timeout:15000 });
+  await expect(legacy.locator('#output')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
   await phone.locator('#phoneLive').click();
   await expect(output.locator(video)).toHaveCount(0);
   await expect(output.locator('#outputPair')).toBeHidden();
