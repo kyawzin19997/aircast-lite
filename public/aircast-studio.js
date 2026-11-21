@@ -51,7 +51,7 @@ function studio() {
     if (options.clean) url.searchParams.set('slate', 'off');
     if (typeof options.black === 'boolean') url.searchParams.set('bg', options.black ? 'black' : 'transparent');
     if (options.frame) url.searchParams.set('frame', options.frame);
-    return url.href;
+    return obsLink(url, slot);
   }
 
   async function copyObsOutput(slot, options, field) {

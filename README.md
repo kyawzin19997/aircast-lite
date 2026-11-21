@@ -16,7 +16,7 @@ Open **Outputs** for Browser Source dimensions, individual camera links, and cle
 
 ![AirCast Output Manager showing Program Browser Source settings](docs/images/output-manager.png)
 
-A password of at least 12 characters encrypts the room in the browser. Share the full OBS or camera link or its QR code, then give the password to participants separately. A QR opens the assigned slot directly in an open room. Protected rooms ask for the password. When using a protected Browser Source in OBS, open **Interact** to enter it. Reopening the source or refreshing its browser page requires unlocking again.
+A password of at least 12 characters encrypts the room in the browser. Paste the copied OBS link into a **Browser** source. It shows the pairing QR while waiting for the camera. The contributor scans the QR, enters the password on their phone, enables the camera, and taps **Go live**. Share the password separately with camera contributors. Encrypted Program viewers open the copied Program link. Copy fresh encrypted OBS links created before v2.2.1.
 
 Encrypted links work on static HTTPS hosting. The optional Cloudflare R2 setup enables shorter links, joining encrypted rooms by Room ID, and server-side expiry of future downloads. AirCast also closes expired room connections in its clients. [Cloudflare storage and expiry](docs/cloudflare-pages.md#optional-encrypted-room-storage)
 

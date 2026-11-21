@@ -9,7 +9,7 @@ import { inMemoryBucket } from './server.mjs';
 function classic(name) {
   const module = { exports: {} };
   runInNewContext(readFileSync(new URL('../public/' + name, import.meta.url), 'utf8'),
-    { module, URL, TextEncoder, TextDecoder, Uint8Array, btoa, atob, crypto, Date, setTimeout, clearTimeout, isSecureContext: true });
+    { module, URL, URLSearchParams, TextEncoder, TextDecoder, Uint8Array, btoa, atob, crypto, Date, setTimeout, clearTimeout, isSecureContext: true });
   return module.exports;
 }
 
@@ -66,6 +66,12 @@ test('room encryption uses independent nonces and authenticates password, room I
   await assert.rejects(sealed.unlock(room, first.envelope, 'incorrect passphrase'), failed);
   await assert.rejects(sealed.unlock(room, tampered, password), failed);
   await assert.rejects(sealed.unlock('AIRCASTROOM33333', first.envelope, password), failed);
+  const output = new URL(await first.access.watchLink(new URL('https://aircast.test/?obs=' + room + '&c=1'), 'CAM1'));
+  const ticket = new URLSearchParams(output.hash.slice(1)).get('watch');
+  const camera = await sealed.watch(room, ticket, first.envelope, 'CAM1');
+  assert.equal(camera.scope, 'CAM1');
+  assert.equal(camera.watchLink, undefined);
+  await assert.rejects(sealed.watch(room, ticket, first.envelope, 'CAM2'), { message: 'This OBS link cannot open that camera.' });
 });
 
 test('encrypted links authenticate the live transport and require the creator signature for Studio', async () => {

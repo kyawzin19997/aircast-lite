@@ -19,6 +19,16 @@ async function startCamera(page, room, slot, address) {
   await page.locator('#phoneLive').click();
 }
 
+async function copiedObsUrl(studio, slot = '') {
+  await studio.locator('#openOutputManager').click();
+  await studio.locator('#outputChoice').selectOption(slot);
+  await studio.locator('#outputForm [type=submit]').click();
+  await expect(studio.locator('#outputUrl')).toHaveValue(/(?:#|&)watch=1\./);
+  const url = await studio.locator('#outputUrl').inputValue();
+  await studio.locator('#outputManager [data-close]').click();
+  return url;
+}
+
 test('legacy and current camera outputs play with Studio closed and reconnect', async ({ context }) => {
   const room = code();
   const output = await context.newPage();
@@ -108,7 +118,7 @@ test('Program switches to Multiview on the same URL and new rooms start empty', 
   await expect(join).toHaveURL(/mode=sender.*cam=CAM20/);
 });
 
-test('stored encrypted rooms support password unlock, direct feeds, and Program Multiview', async ({ context }) => {
+test('stored encrypted rooms ask the phone for a password while OBS displays and receives without one', async ({ context }) => {
   const studio = await context.newPage();
   const requests = [];
   context.on('request', (request) => { if (new URL(request.url()).pathname.endsWith('/api/rooms')) requests.push(request); });
@@ -119,7 +129,6 @@ test('stored encrypted rooms support password unlock, direct feeds, and Program 
   await studio.locator('#createRoomForm [type=submit]').click();
   await expect(studio).toHaveURL(/sealed=1$/);
   await expect(studio.locator('#studioSignal')).toContainText('Signaling ready');
-  const room = new URL(studio.url()).searchParams.get('room');
   await studio.locator('#quickPair').click();
   const field = studio.locator('#pairURL');
   await expect(field).toHaveValue(/mode=sender/);
@@ -127,6 +136,16 @@ test('stored encrypted rooms support password unlock, direct feeds, and Program 
   expect(new URL(cameraUrl).searchParams.get('cam')).toBe('CAM1');
   expect(cameraUrl).not.toMatch(/camera-pass|ticket=/);
   await studio.locator('#sourceDialog [data-close]').click();
+  const obs = await context.newPage();
+  await obs.goto(await copiedObsUrl(studio));
+  await expect(obs.locator('#outputPair')).toBeVisible();
+  await expect(obs.locator('#joinPassword')).toBeHidden();
+  const direct = await context.newPage();
+  const directUrl = await copiedObsUrl(studio, 'CAM1');
+  await direct.goto(directUrl);
+  await expect(direct.locator('#outputPair')).toBeVisible();
+  await expect(direct.locator('#outputPairCamera')).toHaveText('CAM 1');
+  await expect(direct.locator('#joinPassword')).toBeHidden();
   const unlock = async (page, password = 'camera-passphrase') => {
     await page.locator('#joinPassword').fill(password);
     await page.locator('#roomPasswordForm [type=submit]').click();
@@ -139,14 +158,6 @@ test('stored encrypted rooms support password unlock, direct feeds, and Program 
   await unlock(phone);
   await phone.locator('#enableCamera').click();
   await phone.locator('#phoneLive').click();
-  const obs = await context.newPage();
-  await obs.goto('/');
-  await obs.locator('#joinValue').fill(room);
-  await obs.locator('#joinRole').selectOption('viewer');
-  await expect(obs.locator('#joinSlot')).toBeHidden();
-  await obs.locator('#joinForm [type=submit]').click();
-  await expect(obs).toHaveURL(/obs=.+&sealed=1/);
-  await unlock(obs);
   await expect(studio.locator('#sourceList .source-row').first()).toContainText('Live', { timeout:18000 });
   await expect(obs.locator(video)).toBeVisible({ timeout:18000 });
   await studio.locator('#programMultiview').click();
@@ -154,15 +165,14 @@ test('stored encrypted rooms support password unlock, direct feeds, and Program 
   await expect(obs.frameLocator('iframe[title="CAM 1"]').locator(video)).toBeVisible({ timeout:15000 });
   await studio.locator('#programMultiview').click();
   await expect(obs.locator('#output > .output-grid')).toHaveCount(0);
-  const direct = await context.newPage();
-  await direct.goto('/?obs=' + room + '&c=1&sealed=1');
-  await unlock(direct);
   await expect(direct.locator(video)).toBeVisible({ timeout:18000 });
   await studio.goto('about:blank');
   await expect(obs.locator(video)).toHaveCount(0, { timeout:15000 });
   await expect(direct.locator(video)).toBeVisible({ timeout:15000 });
   await direct.keyboard.press('d');
   await expect(direct.locator('.connection-card')).toContainText('Direct camera', { timeout:15000 });
+  await phone.goto('about:blank');
+  await expect(direct.locator('#outputPair')).toBeVisible();
   const posts = requests.filter((request) => request.method() === 'POST');
   expect(posts).toHaveLength(1);
   expect(posts[0].postData()).toMatch(/^1\.\d+\.[\w-]+\.[\w-]+\.[\w-]+$/);
@@ -190,18 +200,14 @@ test('portable encrypted links work without storage and reload requests the pass
   await phone.locator('#phoneLive').click();
   await expect(studio.locator('#sourceList .source-row').first()).toContainText('Live', { timeout:18000 });
   await studio.locator('#sourceDialog [data-close]').click();
-  await studio.locator('#openOutputManager').click();
-  await studio.locator('#outputForm [type=submit]').click();
-  await expect(studio.locator('#outputUrl')).toHaveValue(/#room=1\./);
-  const programUrl = await studio.locator('#outputUrl').inputValue();
+  const programUrl = await copiedObsUrl(studio);
   const address = new URL(programUrl);
   expect(address.searchParams.get('obs')).toBeTruthy();
   expect(address.searchParams.get('sealed')).toBe('1');
-  await studio.locator('#outputManager [data-close]').click();
+  expect(new URLSearchParams(address.hash.slice(1)).get('room')).toMatch(/^1\./);
   const viewer = await context.newPage();
   await viewer.goto(programUrl);
-  await viewer.locator('#joinPassword').fill('portable broadcast phrase');
-  await viewer.locator('#roomPasswordForm [type=submit]').click();
+  await expect(viewer.locator('#joinPassword')).toBeHidden();
   await expect(viewer.locator(video)).toBeVisible({ timeout:15000 });
   await studio.locator('#programMultiview').click();
   await expect(viewer.frameLocator('iframe[title="CAM 1"]').locator(video)).toBeVisible({ timeout:15000 });
@@ -211,6 +217,40 @@ test('portable encrypted links work without storage and reload requests the pass
   await studio.locator('#joinPassword').fill('portable broadcast phrase');
   await studio.locator('#roomPasswordForm [type=submit]').click();
   await expect(studio.locator('#studioSignal')).toContainText('Signaling ready');
+});
+
+test('the protected direct OBS QR contains only the phone join link', async ({ context, request }) => {
+  await context.route('**/api/rooms?*', (route) => route.fulfill({ status: 501 }));
+  const studio = await context.newPage();
+  await studio.goto('/');
+  await studio.locator('#createRoom').click();
+  await studio.locator('#createPassword').fill('an encrypted camera room');
+  await studio.locator('#createRoomForm [type=submit]').click();
+  const direct = new URL(await copiedObsUrl(studio, 'CAM2'));
+  const origin = 'https://aircast.test';
+  await context.route(origin + '/**', async (route) => {
+    const path = new URL(route.request().url()).pathname;
+    const response = await request.get(path === '/' ? '/index.html' : path);
+    if (path === '/aircast-qr.min.js') {
+      const hook = 'const makeCode = QRCode.prototype.makeCode; QRCode.prototype.makeCode = function (value) { window.lastQR = value; return makeCode.call(this, value); };';
+      await route.fulfill({ response, body: (await response.text()) + '\n' + hook });
+    } else await route.fulfill({ response });
+  });
+  const obs = await context.newPage();
+  await obs.goto(origin + direct.pathname + direct.search + direct.hash);
+  await expect(obs.locator('#outputPairQR')).toBeVisible();
+  await expect(obs.locator('#joinPassword')).toBeHidden();
+  await expect.poll(() => obs.evaluate(() => window.lastQR)).toContain('cam=CAM2');
+  const qr = await obs.evaluate(() => window.lastQR);
+  expect(qr).toContain('#room=1.');
+  expect(qr).not.toContain('watch=');
+  expect(qr).not.toContain('an encrypted camera room');
+  const phone = await context.newPage();
+  await phone.goto(qr);
+  await expect(phone.locator('#joinPassword')).toBeVisible();
+  await phone.locator('#joinPassword').fill('an encrypted camera room');
+  await phone.locator('#roomPasswordForm [type=submit]').click();
+  await expect(phone.locator('#phoneDestination')).toHaveText('CAM 2');
 });
 
 test('PWA retains the whole app shell after going offline', async ({ context }) => {

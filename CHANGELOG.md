@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.2.1
+
+- Restored the pairing QR on protected OBS feeds. Camera contributors enter the room password on their phones.
+- Added scoped OBS viewing credentials for protected Program and individual camera links.
+
 ## 2.2.0
 
 - Added client-side room encryption and authenticated WebRTC pairing without a Durable Object.

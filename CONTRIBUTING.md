@@ -13,4 +13,4 @@ npm run test:browser
 
 Keep existing OBS links and settings working. Add a regression test for changes to routing, admission, media handoff, or reconnect. Update the relevant guide with any new settings. The deployment folder is `public/`, so changes to its scripts or styles also need a fresh shell version in `aircast-sw.js`.
 
-The release check includes OBS Browser Source with the same URL on portrait and landscape scenes, one USB or MJPEG feed, a direct phone feed without Studio, a delayed Program cut, and an encrypted viewer unlocked through **Interact**. Repeat the phone checks on Android and iOS. Verify a configured TURN relay on a different network before advertising relay support for a deployment.
+The release check includes OBS Browser Source on portrait and landscape scenes, one USB or MJPEG feed, a direct phone feed without Studio, and a delayed Program cut. Verify that protected direct camera links show a QR in OBS and prompt for the password on the phone. Repeat the phone checks on Android and iOS. Verify a configured TURN relay on a different network before advertising relay support for a deployment.

@@ -19,7 +19,7 @@ PeerJS brokers WebRTC connections. A bounded JSON control channel handles health
 
 ## Public and encrypted rooms
 
-Public routes and legacy public OBS URLs use their original signaling namespace. An encrypted manifest holds a random membership secret and the Studio signing public key. Browsers derive a routing namespace from the membership secret and authenticate peers using fresh challenges bound to peer IDs, role, slot, and DTLS fingerprints. Studio also proves possession of its separate signing key. The viewer’s same-origin Multiview frames reuse the already unlocked in-memory room context.
+Public routes and legacy public OBS URLs use their original signaling namespace. An encrypted manifest holds a random membership secret and the Studio signing public key. Browsers derive a routing namespace from the membership secret and authenticate peers using fresh challenges bound to peer IDs, role, slot, and DTLS fingerprints. Copied OBS URLs carry a scoped viewing credential and publisher verification keys. Studio and direct camera publishers authenticate with their signing keys. The same-origin OBS Multiview frames reuse the Program viewing context and connect only to Studio.
 
 The optional Pages Function accepts immutable room records. Studio’s encrypted recovery credential and camera framing remain in the browser. Only the shared encrypted manifest is uploaded. Live streams remain browser-owned and are encrypted by WebRTC. See [Security](../SECURITY.md) for the trust model and expiry limits.
 

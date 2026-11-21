@@ -30,7 +30,8 @@ function obsOutput() {
   const mutedPreview = query.get('mute') === '1';
   if (!room || invalidSlot) return;
   const fixedPairSlot = slot || normalizeSlot(query.get('pairCam'));
-  let pairSlot = fixedPairSlot || (roomParam === null || query.get('obs') === '1' ? '' : 'CAM1');
+  const sealed = query.get('sealed') === '1';
+  let pairSlot = fixedPairSlot || (sealed || (roomParam !== null && query.get('obs') !== '1') ? 'CAM1' : '');
   let renderedPairSlot;
   const cleanFeed = query.get('slate') === 'off';
   const showPairing = !cleanFeed && query.get('pair') !== '0';
@@ -73,13 +74,16 @@ function obsOutput() {
       return;
     }
     if (location.protocol !== 'https:' || localPage()) {
-      showManual('Open AirCast over HTTPS on your phone, enter these connection details, then tap Go live.');
+      showManual(sealed ? 'Open the camera pairing link on your phone and enter the room password there.'
+        : 'Open AirCast over HTTPS on your phone, enter these connection details, then tap Go live.');
       return;
     }
     const url = makeUrl(room, 'phone', target);
     qr.hidden = false;
     delete $('outputPairLayout').dataset.manual;
-    hint.textContent = 'Scan the code, enable your camera, then tap Go live.';
+    hint.textContent = sealed
+      ? 'Scan with your phone. Enter the room password there, then enable the camera and tap Go live.'
+      : 'Scan the code, enable your camera, then tap Go live.';
     const loading = document.createElement('small');
     loading.textContent = 'Loading QR code…';
     qr.replaceChildren(loading);
@@ -94,6 +98,12 @@ function obsOutput() {
         showManual('Open AirCast on your phone, enter these connection details, then tap Go live.');
       }
     });
+  }
+
+  if (sealed && !roomAccess) {
+    $('outputPairTitle').textContent = 'Pair a camera';
+    $('outputPairHint').textContent += ' Copy a fresh OBS link from AirCast to receive video.';
+    return;
   }
 
   function updateSlates() {
@@ -202,7 +212,8 @@ function obsOutput() {
   }
 
   function subscribe(route, target, role) {
-    return new ClientLink(target, { role, slot, smoothProgram: !slot, programLayout: !slot }, {
+    return new ClientLink(target, { role, slot, smoothProgram: !slot, programLayout: !slot,
+      viewerScope: roomAccess?.scope, studioOnly: query.get('studio') === '1' }, {
       open(link) {
         const feed = { link, snapshot: standby, stream: null, watching: null };
         feeds.set(route, feed);

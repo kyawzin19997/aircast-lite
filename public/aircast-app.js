@@ -127,12 +127,20 @@ async function boot(password) {
     if (inherited?.manifest.stored && !location.hash) roomManifest = inherited.manifest;
     if (sealed || query.has('until')) roomManifest ||= await findRoom(target.room, new URL(location.href), sealed);
     if (sealed) {
-      const role = view === 'output' ? 'viewer' : view === 'phone' ? 'contributor' : 'host';
       if (!roomManifest?.envelope) throw new Error('The encrypted room data is missing.');
+      if (view === 'output') {
+        const child = inherited?.manifest.envelope === roomManifest.envelope && inherited.access.scope === '';
+        const ticket = new URLSearchParams(location.hash.slice(1)).get('watch');
+        roomAccess = child ? { ...inherited.access, slot: target.slot }
+          : await AirCastSealed.watch(target.room, ticket, roomManifest.envelope, target.slot);
+        roomManifest.expires = roomAccess?.expires;
+        showRoom(view);
+        return;
+      }
+      const role = view === 'phone' ? 'contributor' : 'host';
       const recovery = role === 'host' ? saved(AirCastSealed.recoveryKey(target.room)) : '';
       if (role === 'host' && typeof recovery !== 'string') throw new Error('Open Studio in the browser that created this encrypted room.');
-      const access = inherited?.manifest.envelope === roomManifest.envelope ? inherited.access
-        : await AirCastSealed.unlock(target.room, roomManifest.envelope, password, recovery);
+      const access = await AirCastSealed.unlock(target.room, roomManifest.envelope, password, recovery);
       roomAccess = { ...access, role, slot: target.slot };
       roomManifest.expires = access.expires;
     }

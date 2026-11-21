@@ -121,6 +121,10 @@ function roomLink(address, room, manifest = roomManifest) {
   return address.href;
 }
 
+function obsLink(address, slot) {
+  return roomAccess?.watchLink ? roomAccess.watchLink(address, slot) : address.href;
+}
+
 function endpoint(room) {
   return roomAccess ? 'AIRCAST-SEALED-HUB-' + roomAccess.namespace : AirCastRooms.endpoint(room, null);
 }

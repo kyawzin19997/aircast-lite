@@ -967,7 +967,9 @@ function phone() {
   $('phoneCopyObs').onclick = async () => {
     const { room, slot } = formDestination();
     if (!room) return;
-    const url = makeUrl(room, 'obs', slot);
+    let url;
+    try { url = await obsLink(new URL(makeUrl(room, 'obs', slot)), slot); }
+    catch (error) { setHint(error.message); return; }
     if (await copy(url, routeName(slot) + ' OBS URL copied')) {
       const label = $('phoneCopyObs').lastElementChild;
       label.textContent = 'Copied';
