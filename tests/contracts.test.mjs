@@ -76,3 +76,32 @@ test('authority separates host, contributor, and viewer and revokes both session
   await enter(viewer.secret,'viewer','CAM10',403);
   await call({ op:'list',room,session:host.session },403,{ Origin:'https://outside.invalid' });
 });
+
+test('open rooms allow passwordless pairing and optional expiry invalidates all roles', async (t) => {
+  const env = { ROOMS: inMemoryAuthority() };
+  const origin = 'https://aircast.test';
+  const send = async (data, status = 200) => {
+    const response = await onRequest({ env, request: new Request(origin + '/api/rooms', {
+      method: 'POST', headers: { Origin: origin }, body: JSON.stringify(data)
+    }) });
+    assert.equal(response.status, status, await response.clone().text());
+    return response.json();
+  };
+  const open = await send({ op: 'create', openJoin: true, hours: 0 });
+  const locked = await send({ op: 'create', openJoin: true, password: 'camera-pass', hours: 1 });
+  assert.equal((await send({ op: 'info', room: open.room })).expires, null);
+  const { expires } = await send({ op: 'info', room: locked.room });
+  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign','verify']);
+  const publicKey = await crypto.subtle.exportKey('jwk', keys.publicKey);
+  const enter = (room, role, args, status) => send({ op: 'enter', room, role, publicKey, ...args }, status);
+  const phone = await enter(open.room, 'contributor', { slot: 'CAM24' });
+  assert.equal(phone.slot, 'CAM24');
+  const viewer = await enter(locked.room, 'viewer', { password: 'camera-pass' });
+  await enter(locked.room, 'host', { password: 'camera-pass' }, 403);
+  await send({ op: 'leave', room: locked.room, session: viewer.session });
+  await enter(locked.room, 'viewer', { secret: viewer.resume });
+  t.mock.method(Date, 'now', () => expires + 1);
+  assert.equal((await send({ op: 'info', room: locked.room }, 410)).code, 'ROOM_EXPIRED');
+  await enter(locked.room, 'host', { secret: locked.secret }, 410);
+  await enter(open.room, 'viewer');
+});

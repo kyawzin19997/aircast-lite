@@ -92,11 +92,6 @@ function store(key, value) {
   catch { /* Private storage is optional. */ }
 }
 
-function legacyRoom() {
-  try { return sessionStorage.getItem('aircast_studio_code'); }
-  catch { return null; }
-}
-
 const normalizeRoom = AirCastRooms.room;
 const normalizeSlot = AirCastRooms.slot;
 const slotNumber = (slot) => Number(slot.slice(3));
@@ -127,10 +122,11 @@ function cameraEndpoint(room, slot) {
 }
 
 const incomingCaps = new WeakMap();
-const packetTypes = new Set(['leave','ping','pong','media','program','paired','occupied','unknown-slot','replaced','stop','torch','watch']);
+const packetTypes = new Set(['leave','ping','pong','media','program','paired','occupied','unknown-slot','replaced','stop','torch','watch','layout']);
 
 function validControlPacket(value) {
   if (!value || typeof value !== 'object' || !packetTypes.has(value.type)) return false;
+  if (value.type === 'layout') return ['program','grid'].includes(value.mode) && Array.isArray(value.slots) && value.slots.length <= 24 && value.slots.every((slot) => normalizeSlot(slot)) && ['auto','2','3','4'].includes(value.columns);
   if (value.type === 'watch') return typeof value.active === 'boolean';
   if (value.type !== 'media' && value.type !== 'program') return true;
   // Limits apply before allocating SDP, ICE or transition state.

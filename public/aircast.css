@@ -410,17 +410,19 @@ html[data-keyboard][data-view=phone] #phoneDialog[open] {
 }
 #roomLanding { display: none; }
 html[data-view=join] #roomLanding { display: grid; min-height: 100dvh; place-items: center; padding: 20px; }
-html[data-view=join] #studio, html[data-boot-error] :is(#studio, #phone, #output) { display: none !important; }
 .room-welcome { width: min(100%, 460px); display: grid; gap: 14px; padding: 24px; }
-.room-welcome form, #inviteManager { display: grid; gap: 10px; }
-.room-welcome .group, .room-actions .group { flex-wrap: wrap; }
-.room-actions { border-top: 1px solid var(--line); }
-.invite-controls { align-items: end; }
-.invite-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.room-welcome form { display: grid; gap: 10px; }
+#roomHome { justify-self: start; }
+#joinFeedback:empty { display: none; }
 .output-grid { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(var(--columns, 2), minmax(0,1fr)); grid-template-rows: repeat(var(--rows, 2), minmax(0,1fr)); gap: 2px; }
 .output-grid[data-background=black], #output[data-background=black] { background: #000; }
 #output[data-background=transparent].has-media, #output[data-background=transparent] .dissolve-layer { background: transparent; }
 .output-grid iframe { width: 100%; height: 100%; display: block; border: 0; color-scheme: normal; }
+#output[data-program-layout=grid] > :is(.dissolve-layer,.output-pair) { opacity: 0; }
+.output-grid { z-index: 3; }
+#phoneHideCamera { grid-column: -2 / -1; grid-row: 1; }
+.phone-toolbar:has(#phoneHideCamera:not([hidden])) :is(#phoneMic,#swapLens) { grid-row: 2; }
+@media (max-width: 305px) { .phone-toolbar:has(#phoneHideCamera:not([hidden])) #swapLens { grid-row: 3; } }
 .connection-card { position: fixed; z-index: 20; inset: 16px 16px auto auto; width: min(380px, calc(100% - 32px)); padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); color: var(--text); white-space: pre-wrap; font: .84rem/1.65 var(--mono); }
 .connection-card button { margin-top: 8px; }
 @media(max-width:530px) { #openOutputManager span:last-child { display: none; } .multiview-actions { flex-wrap: wrap; justify-content: end; } }

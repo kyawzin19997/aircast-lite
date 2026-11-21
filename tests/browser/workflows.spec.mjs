@@ -32,6 +32,12 @@ test('legacy and current camera outputs play with Studio closed and reconnect', 
   await legacy.goto('/?room=' + room + '&obs=direct&cam=CAM1');
   await expect(legacy.locator(video)).toBeVisible({ timeout:15000 });
   await expect(legacy.locator('#output')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+  await phone.locator('#phoneHideCamera').click();
+  await expect(phone.locator('#phoneStatus')).toContainText('Camera hidden');
+  await expect(phone.locator('#phoneView.has-media')).toBeVisible();
+  await expect(legacy.locator('#outputIdle')).toBeVisible();
+  await phone.locator('#phoneHideCamera').click();
+  await expect(legacy.locator(video)).toBeVisible();
   await phone.locator('#phoneLive').click();
   await expect(output.locator(video)).toHaveCount(0);
   await expect(output.locator('#outputPair')).toBeHidden();
@@ -49,7 +55,7 @@ test('legacy and current camera outputs play with Studio closed and reconnect', 
   await expect(legacy.locator('#outputPair')).toBeVisible();
 });
 
-test('public rooms keep separate settings and Multiview loads Studio-owned slots', async ({ context }) => {
+test('Program switches to Multiview on the same URL and new rooms start empty', async ({ context }) => {
   const first = code();
   const studio = await context.newPage();
   await studio.goto('/?room=' + first);
@@ -59,21 +65,34 @@ test('public rooms keep separate settings and Multiview loads Studio-owned slots
   await expect(studio.locator('#usbPreview.has-media')).toBeVisible();
   await studio.locator('#sourceDialog [data-close]').click();
   const grid = await context.newPage();
-  await grid.goto('/?obs=' + first + '&view=multiview&slots=1,10');
-  await expect(grid.locator('.output-grid iframe')).toHaveCount(2);
+  await grid.goto('/?obs=' + first);
+  const programUrl = grid.url();
+  await expect(grid.locator(video)).toBeVisible();
+  await studio.locator('#programMultiview').click();
+  await expect(grid.locator('.output-grid iframe').first()).toBeVisible();
   await expect(grid.frameLocator('iframe[title="CAM 1"]').locator(video)).toBeVisible({ timeout:15000 });
+  await expect(grid).toHaveURL(programUrl);
+  await studio.locator('#programMultiview').click();
+  await expect(grid.locator('.output-grid')).toHaveCount(0);
+  await expect(grid.locator(video)).toBeVisible();
   if (process.env.AIRCAST_SCREENSHOTS) {
     await studio.locator('#openOutputManager').click();
-    await studio.locator('#outputChoice').selectOption('multiview');
     await studio.locator('#outputClean').check();
     await studio.locator('#outputManager').screenshot({ path:'docs/images/output-manager.png' });
     await studio.locator('#outputManager [data-close]').click();
   }
   await studio.locator('#roomButton').click();
+  expect(new URL(studio.url()).searchParams.has('room')).toBe(false);
   await studio.locator('#createRoom').click();
-  await expect(studio).toHaveURL(/room=[A-Z0-9]{16}$/);
+  if (process.env.AIRCAST_SCREENSHOTS) await studio.locator('.room-welcome').screenshot({ path:'docs/images/room-home.png' });
+  await studio.locator('#createRoomForm [type=submit]').click();
+  await expect(studio).toHaveURL(/room=[A-Z0-9]{16}/);
   await expect(studio.locator('#cameraCount')).toHaveText('0 connected');
-  await expect(grid.frameLocator('iframe[title="CAM 1"]').locator(video)).toHaveCount(0);
+  await studio.locator('#quickPair').click();
+  await expect(studio.locator('#pairURL')).toHaveValue(/mode=sender/);
+  const openPhone = await context.newPage();
+  await openPhone.goto(await studio.locator('#pairURL').inputValue());
+  await expect(openPhone.locator('#enableCamera')).toBeVisible();
   const join = await context.newPage();
   await join.goto('/?join=' + first);
   await expect(join.locator('#joinValue')).toHaveValue(first);
@@ -82,53 +101,58 @@ test('public rooms keep separate settings and Multiview loads Studio-owned slots
   await expect(join).toHaveURL(/mode=sender.*cam=CAM20/);
 });
 
-test('private grant authorizes Studio and direct paths, then revocation ends direct streaming', async ({ context }) => {
+test('password rooms prompt after QR pairing and support direct and Multiview outputs', async ({ context }) => {
   const studio = await context.newPage();
   await studio.goto('/');
-  await studio.locator('#roomButton').click();
-  await studio.locator('#createPrivateRoom').click();
+  await studio.locator('#createRoom').click();
+  await studio.locator('#createPassword').fill('camera-pass');
+  await studio.locator('#roomExpiry').selectOption('1');
+  await studio.locator('#createRoomForm [type=submit]').click();
   await expect(studio).toHaveURL(/private=1/);
   await expect(studio.locator('#studioSignal')).toContainText('Signaling ready');
   const room = new URL(studio.url()).searchParams.get('room');
-  await studio.locator('#roomButton').click();
-  if (process.env.AIRCAST_SCREENSHOTS) await studio.locator('#roomDialog').screenshot({ path:'docs/images/private-room.png' });
-  await studio.locator('#inviteCamera').click();
-  const field = studio.locator('#roomInviteLink');
-  await expect(field).toHaveValue(/mode=sender.+#ticket=/);
+  await studio.locator('#quickPair').click();
+  const field = studio.locator('#pairURL');
+  await expect(field).toHaveValue(/mode=sender/);
   const cameraUrl = await field.inputValue();
-  await studio.locator('#inviteViewer').click();
-  await expect(field).toHaveValue(/obs=.+#ticket=/);
-  const viewerUrl = await field.inputValue();
+  expect(new URL(cameraUrl).searchParams.get('cam')).toBe('CAM1');
+  expect(cameraUrl).not.toMatch(/camera-pass|ticket=/);
+  await studio.locator('#sourceDialog [data-close]').click();
+  const unlock = async (page, password = 'camera-pass') => {
+    await page.locator('#joinPassword').fill(password);
+    await page.locator('#roomPasswordForm [type=submit]').click();
+  };
   const phone = await context.newPage();
-  await startCamera(phone, room, 'CAM1', cameraUrl);
+  await phone.goto(cameraUrl);
+  await expect(phone.locator('#joinTitle')).toHaveText('Enter room password');
+  await unlock(phone, 'wrong-password');
+  await expect(phone.locator('#joinFeedback')).toContainText(/incorrect|match/i);
+  await unlock(phone);
+  await phone.locator('#enableCamera').click();
+  await phone.locator('#phoneLive').click();
   const obs = await context.newPage();
-  await obs.goto(viewerUrl);
+  await obs.goto('/');
+  await obs.locator('#joinValue').fill(room);
+  await obs.locator('#joinRole').selectOption('viewer');
+  await expect(obs.locator('#joinSlot')).toBeHidden();
+  await obs.locator('#joinForm [type=submit]').click();
+  await expect(obs).toHaveURL(/obs=.+&private=1/);
+  await unlock(obs);
   await expect(studio.locator('#sourceList .source-row').first()).toContainText('Live', { timeout:18000 });
   await expect(obs.locator(video)).toBeVisible({ timeout:18000 });
-  const unknown = await context.newPage();
-  await unknown.goto('/?obs=' + room + '&c=1&private=1');
-  await expect(unknown.locator('#outputPairTitle')).toHaveText('Private output unavailable');
-  await expect(unknown.locator(video)).toHaveCount(0);
+  await studio.locator('#programMultiview').click();
+  await expect(obs.frameLocator('iframe[title="CAM 1"]').locator(video)).toBeVisible({ timeout:15000 });
+  await studio.locator('#programMultiview').click();
+  await expect(obs.locator('.output-grid')).toHaveCount(0);
   const direct = await context.newPage();
-  const cameraOutput = new URL(viewerUrl);
-  cameraOutput.searchParams.set('c','1');
-  await direct.goto(cameraOutput.href);
+  await direct.goto('/?obs=' + room + '&c=1&private=1');
+  await unlock(direct);
   await expect(direct.locator(video)).toBeVisible({ timeout:18000 });
-  const studioUrl = studio.url();
   await studio.goto('about:blank');
   await expect(obs.locator(video)).toHaveCount(0, { timeout:15000 });
   await expect(direct.locator(video)).toBeVisible({ timeout:15000 });
   await direct.keyboard.press('d');
   await expect(direct.locator('.connection-card')).toContainText('Direct camera', { timeout:15000 });
-  await studio.goto(studioUrl);
-  await expect(studio.locator('#studioSignal')).toContainText('Signaling ready', { timeout:15000 });
-  await studio.locator('#roomButton').click();
-  await studio.locator('#roomInvites .invite-row').filter({ hasText:'Contributor' }).getByRole('button', { name:'Revoke' }).click();
-  await expect(direct.locator(video)).toHaveCount(0, { timeout:20000 });
-  await phone.goto(cameraUrl);
-  await phone.reload();
-  await expect(phone.locator('#joinTitle')).toHaveText('Private room unavailable');
-  await expect(phone.locator('#joinFeedback')).toContainText('does not allow');
 });
 
 test('PWA retains the whole app shell after going offline', async ({ context }) => {

@@ -152,6 +152,7 @@ function phone() {
   let studioState = '';
   const viewers = new Map();
   let sending = false;
+  let cameraHidden = false;
   let hasSentVideo = false;
   let copyObsTimer;
   let linkMessage = '';
@@ -383,8 +384,8 @@ function phone() {
     const ready = session?.signaler.ready;
     if (session && !ready && !paired) startPairDeadline();
     const states = [studioState, ...routes.map((viewer) => viewer.state)];
-    const transmitting = sending && available && states.includes('connected');
-    const waitingForVideo = sending && available && !transmitting && Boolean(studioPipe || routes.length);
+    const transmitting = sending && !cameraHidden && available && states.includes('connected');
+    const waitingForVideo = sending && !cameraHidden && available && !transmitting && Boolean(studioPipe || routes.length);
     if (transmitting) hasSentVideo = true;
     trackVideoStart(waitingForVideo);
     const failed = !session && linkTone === 'bad';
@@ -423,10 +424,13 @@ function phone() {
     $('phoneConnectionHint').hidden = !hint;
     $('phoneConnect').disabled = same && Boolean(session);
     $('phoneConnect').textContent = same && session ? (paired ? 'Connected' : ready ? 'Ready' : status + '…') : same && failed ? 'Retry' : 'Connect';
-    $('phoneCopyObs').hidden = Boolean(roomAccess);
+    $('phoneCopyObs').hidden = Boolean(roomAccess && !roomAccess.openJoin);
     $('phoneCopyObs').disabled = !form.room;
     $('phoneDisconnect').hidden = !session;
     $('phoneRetry').hidden = !failed;
+    if (sending && cameraHidden) setSignal($('phoneStatus'), 'Camera hidden', 'warn');
+    $('phoneHideCamera').hidden = !sending;
+    buttonState($('phoneHideCamera'), cameraHidden, cameraHidden ? 'Show camera on the output' : 'Hide camera from the output');
     $('phoneLive').disabled = !sending && (!available || busy);
     $('phoneLiveLabel').textContent = sending ? 'Stop sending' : 'Go live';
     $('phoneLive').classList.toggle('transmitting', sending);
@@ -451,7 +455,7 @@ function phone() {
   function publish() {
     const routes = [...viewers.values()].filter((viewer) => viewer.pipe);
     if (!studioPipe && !routes.length) return;
-    const nextVideo = sending && video?.readyState === 'live' ? video : null;
+    const nextVideo = sending && !cameraHidden && video?.readyState === 'live' ? video : null;
     const nextAudio = nextVideo && microphone?.readyState === 'live' ? microphone : null;
     if (publishedVideo !== nextVideo || publishedAudio !== nextAudio) {
       publishedVideo = nextVideo;
@@ -464,11 +468,11 @@ function phone() {
     const rate = captureBitrate(preset, frameRate, output);
     const snapshot = {
       kind: nextVideo ? 'video' : 'standby', image: { ...settings, rotation: activeRotation() }, audio: Boolean(nextAudio),
-      paused: !sending, format: nextVideo ? videoFormat(output, 'Camera active') : '',
+      paused: !sending || cameraHidden, format: nextVideo ? videoFormat(output, 'Camera active') : '',
       torchSupported: supportsTorch(), torchOn, rate, bitrate: rate, scale: output.scale, adaptive
     };
     studioPipe?.update(publishedStream, snapshot);
-    const idleCamera = !sending && hasSentVideo ? routeName(destination.slot) : '';
+    const idleCamera = (!sending || cameraHidden) && hasSentVideo ? routeName(destination.slot) : '';
     for (const viewer of routes) {
       if (viewer.watching) viewer.pipe.update(publishedStream, { ...snapshot, paired: true, idleCamera });
       else viewer.pipe.update(null, { kind: 'standby', paired: true });
@@ -784,7 +788,7 @@ function phone() {
 
   function disconnectPhone(message = '') {
     detachPair();
-    sending = autoPair = false;
+    sending = autoPair = cameraHidden = false;
     if (destination.room) syncAddress();
     savePhone();
     linkMessage = message;
@@ -905,7 +909,7 @@ function phone() {
   }
 
   function stopSending() {
-    sending = false;
+    sending = cameraHidden = false;
     publish();
     if (session?.signaler.ready) linkMessage = '';
     setHint('');
@@ -945,14 +949,25 @@ function phone() {
   $('phoneRoom').value = destination.room;
   $('phoneSlot').value = destination.slot;
   $('phoneConnectionForm').oninput = updatePhone;
-  $('phoneConnectionForm').onsubmit = (event) => {
+  $('phoneConnectionForm').onsubmit = async (event) => {
     event.preventDefault();
     $('phoneRoom').blur();
-    connectPhone(formDestination());
+    const target = formDestination();
+    event.submitter.disabled = true;
+    try {
+      if (!roomAccess && await AirCastRooms.managed(target.room)) {
+        location.assign(protectedUrl(makeUrl(target.room, 'phone', target.slot)));
+        return;
+      }
+      connectPhone(target);
+    } catch (error) { setHint(error.message); }
+    finally { updatePhone(); }
   };
   $('phoneCopyObs').onclick = async () => {
     const { room, slot } = formDestination();
-    if (room && await copy(makeUrl(room, 'obs', slot), routeName(slot) + ' OBS URL copied')) {
+    if (!room) return;
+    const url = makeUrl(room, 'obs', slot);
+    if (await copy(roomAccess ? protectedUrl(url) : url, routeName(slot) + ' OBS URL copied')) {
       const label = $('phoneCopyObs').lastElementChild;
       label.textContent = 'Copied';
       clearTimeout(copyObsTimer);
@@ -964,6 +979,12 @@ function phone() {
   if (!destination.room) setHint('Open Camera settings to connect.');
   $('enableCamera').onclick = () => { recoverStep = 0; acquire(facing, false); };
   $('swapLens').onclick = () => acquire(facing === 'environment' ? 'user' : 'environment', true);
+  $('phoneHideCamera').onclick = () => {
+    if (!sending) return;
+    cameraHidden = !cameraHidden;
+    publish();
+    updatePhone();
+  };
   $('phoneLive').onclick = () => sending ? stopSending() : startSending();
   $('phoneMic').onclick = toggleMic;
   $('phoneTorch').onclick = toggleTorch;

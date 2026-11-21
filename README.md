@@ -6,13 +6,17 @@ Turn a phone, USB webcam, or MJPEG camera into an OBS Browser Source. Use a came
 
 ## Rooms and OBS outputs
 
-Open the **Room** menu in Studio to create a public room, join by ID or invitation, or open the standalone phone camera. Room settings are stored separately. Use **Add view** to configure up to 24 slots. The original shortcuts still cover slots 1–9.
+Select **Create room** on the home page. Choose a password and an expiration if you need them, then select **Start Studio** to generate the Room ID. To join an existing room, enter its ID or pairing link and choose **Camera contributor** or **Program viewer**. Contributors pick a slot before joining. Each room keeps separate Studio settings.
 
-Open **Outputs** above Multiview to choose Program, an individual camera, or the Multiview grid. The manager gives you the Browser Source dimensions to enter in OBS and can add clean-feed, mute, and background settings to the link. Press **D** in an interactive output or choose **Connection diagnostics** in Camera settings to inspect status and video statistics.
+![AirCast home page with optional room password and expiration settings](docs/images/room-home.png)
 
-![AirCast OBS Output Manager showing options for a Multiview feed](docs/images/output-manager.png)
+Add the **Program** URL to OBS once. Select **Multiview** in Studio’s Program controls to send the camera grid to that same OBS source. Select **Program** in the same control to return to the live camera. Multiview carries audio from the selected Program camera. Use **Add view** to configure up to 24 slots.
 
-Private rooms are available when the optional [room authority](docs/cloudflare-pages.md#enable-private-rooms) is configured. The host can issue a contributor invitation for a camera slot or a viewer invitation for an output. Use **Revoke** in the room menu to remove access. Existing public OBS links continue to work.
+Open **Outputs** for Browser Source dimensions, individual camera links, and clean-feed, mute, and background settings. Press **D** in an interactive output or choose **Connection diagnostics** in Camera settings for connection status and video statistics.
+
+![AirCast Output Manager showing Program Browser Source settings](docs/images/output-manager.png)
+
+Passwords and expiration require the Cloudflare [room authority](docs/cloudflare-pages.md#enable-passwords-and-expiration). A QR opens the assigned camera slot directly in an open room. A protected room asks for the password before opening the slot. Studio’s copied OBS links carry viewer access for the selected output. Share them only with intended viewers and OBS operators.
 
 ![AirCast Studio showing the live Program monitor, Multiview, and the Program framing controls](docs/images/studio.png)
 
@@ -37,10 +41,10 @@ Screenshots show the running AirCast app with demonstration camera feeds.
 
 ### Pair and operate a phone
 
-1. Scan the QR or open **Camera settings** on an existing phone page. Enter the same **Room ID** and select the desired **Camera** slot. Choose **Connect**.
+1. Scan a camera’s QR to open its assigned slot, or join from the home page by entering the **Room ID** and choosing **Camera contributor** and the slot. Enter the room password if prompted.
 2. Tap **Enable camera**, then **Go live**. Use the capture chip to change stream resolution and frame rate. Available resolutions run from 360p to 4K, depending on the camera and browser. **Adapt quality to network** lets the browser balance stream quality and smoothness. **Use 360p for low bandwidth** selects the lowest stream preset.
 3. Tap the bottom-left sliders icon for zoom, brightness, and contrast. The rotate button turns the OBS feed by 90° and locks the angle. Re-enable **Auto-rotate video for OBS** in Camera settings to follow device orientation.
-4. **Stop sending** pauses video while the camera remains paired. **Disconnect** releases the slot and brings back the pairing screen. Leaving the phone camera page also releases the camera.
+4. Use **Hide camera from the output** while live to pause video and microphone audio while you keep the local preview and pairing. Tap it again to resume. **Disconnect** releases the slot and brings back the pairing screen. Leaving the phone camera page also releases the camera.
 
 ![AirCast phone camera view with the Go Live control centered at the bottom](docs/images/phone-camera.png)
 

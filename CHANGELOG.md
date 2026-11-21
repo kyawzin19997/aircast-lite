@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.1.0
+
+- Opened AirCast on a room home page. Rooms are created on demand with optional passwords and expiration.
+- Added direct camera-slot pairing for open rooms and a password prompt after scanning a protected room’s QR.
+- Added a Studio control to switch the single OBS Program source between the selected camera and Multiview.
+- Added a live camera hide control that pauses outgoing video and microphone audio while keeping local preview and pairing.
+
 ## 2.0.1
 
 - Preserved transparency around live video when the Output Manager selects a transparent background.

@@ -40,9 +40,9 @@ cd aircast-lite
 
 After editing the app, run the local smoke test described in the [README](../README.md#local-development), commit the changed files, and push `main`.
 
-## Enable private rooms
+## Enable passwords and expiration
 
-The public workflow runs without bindings. To enable private rooms, deploy the room authority separately and bind it to the Pages application. Deploy while working in the cloned repository root:
+The public workflow runs without bindings. Passwords and room expiration use the room authority. Deploy it from the cloned repository root:
 
 ```sh
 npx wrangler@4.166.0 deploy --config infra/wrangler.toml
@@ -50,9 +50,9 @@ npx wrangler@4.166.0 deploy --config infra/wrangler.toml
 
 In the Pages project settings, add a **Durable Object namespace** binding named `ROOMS` for the `RoomAuthority` class in the `aircast-room-authority` Worker. Add it to each production or preview environment that should allow private rooms, then redeploy Pages. Only `/api/rooms` invokes the Pages Function. [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/get-started/) · [Pages bindings](https://developers.cloudflare.com/pages/functions/bindings/)
 
-Open Studio’s **Room** menu and choose **Create private room**. Choose a camera slot before issuing a contributor invitation. Share viewer links only with the intended viewers or OBS operators. Revoke unused links from the room menu. Private rooms expire after seven days. Keep the host browser tab or save its host recovery link to reopen it later.
+From AirCast home, choose **Create room**, then optionally set a password and an expiration before selecting **Start Studio**. Expiration defaults to **Never**. Once a room expires, camera and Program connections end and room entry closes. Keep the Studio tab open while the Program output is in use.
 
-![AirCast Room dialog showing private invitation controls and host recovery](images/private-room.png)
+![AirCast home page showing the room creation and join forms](images/room-home.png)
 
 ### Configure an optional TURN relay
 

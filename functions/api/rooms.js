@@ -1,7 +1,7 @@
 import { json } from '../../infra/room-authority.mjs';
 
 export async function onRequest({ request, env }) {
-  if (!env.ROOMS) return json({ error: 'Private rooms require the optional room authority.' }, 503);
+  if (!env.ROOMS) return json({ error: 'Passwords and expiration require the Cloudflare ROOMS binding.', code: 'ROOMS_UNAVAILABLE' }, 503);
   if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
   if (request.headers.get('Origin') !== new URL(request.url).origin) return json({ error: 'Use the AirCast site to access private rooms.' }, 403);
   const limit = 8192;
@@ -22,12 +22,16 @@ export async function onRequest({ request, env }) {
   }
   let data;
   try { data = JSON.parse(body + decoder.decode()); } catch { return json({ error: 'Invalid JSON.' }, 400); }
-  if (!data || typeof data !== 'object' || !['create','enter','verify','invite','list','revoke','alive','turn'].includes(data.op)) return json({ error: 'Invalid room operation.' }, 400);
+  if (!data || typeof data !== 'object' || !['create','info','enter','verify','invite','list','revoke','alive','leave','turn'].includes(data.op)) return json({ error: 'Invalid room operation.' }, 400);
   const send = (name, payload) => env.ROOMS.get(env.ROOMS.idFromName(name)).fetch('https://room.internal/', { method: 'POST', body: JSON.stringify(payload) });
   if (data.op === 'create' || data.op === 'enter') {
     const ip = request.headers.get('CF-Connecting-IP') || 'local';
     const limited = await send('rate:' + ip, { op: 'rate', burst: data.op === 'enter' });
     if (!limited.ok) return limited;
+    if (data.op === 'enter' && data.password && !data.secret && /^[A-F0-9]{16}$/.test(data.room)) {
+      const attempt = await send('rate:' + ip + ':' + data.room, { op: 'rate', password: true });
+      if (!attempt.ok) return attempt;
+    }
   }
   if (data.op === 'create') {
     data.room = Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase();

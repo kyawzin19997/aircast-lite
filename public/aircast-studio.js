@@ -2,12 +2,14 @@
 
 function studio() {
   const legacy = saved(KEY);
-  const directory = saved('aircast-room-directory');
-  const room = normalizeRoom(query.get('room')) || normalizeRoom(directory.lastPublic) || normalizeRoom(legacy.room) || normalizeRoom(legacyRoom()) || randomCode(16);
+  const room = normalizeRoom(query.get('room'));
   const roomKey = 'aircast-room:' + (protectedRoom ? 'private:' : 'public:') + room;
   const existing = saved(roomKey);
   const stored = existing.room ? existing : !protectedRoom && normalizeRoom(legacy.room) === room ? legacy : {};
   let multiviewColumns = MULTIVIEW_LAYOUTS.includes(stored.multiviewColumns) ? stored.multiviewColumns : 'auto';
+  let programLayout = stored.programLayout === 'grid' ? 'grid' : 'program';
+  const viewerLinks = new Map();
+  const contributorLinks = new Map();
   let signaler;
   let selected = '';
   let dialogSlot = '';
@@ -42,31 +44,24 @@ function studio() {
   if (program && !cameras.has(program)) program = null;
 
   function persist() {
-    if (!protectedRoom) store('aircast-room-directory', { lastPublic: room });
-    store(roomKey, { room, program, programImage, selected, multiviewColumns, slots: ordered().map(({ slot, name, image, mjpeg }) => ({ slot, name, image, mjpeg })) });
+    store(roomKey, { room, program, programImage, selected, programLayout, multiviewColumns, slots: ordered().map(({ slot, name, image, mjpeg }) => ({ slot, name, image, mjpeg })) });
   }
 
   async function obsUrl(slot = '', muted = false, options = {}) {
-    const multiview = slot === 'multiview';
-    const url = new URL(makeUrl(room, 'obs', multiview ? '' : slot, muted || multiview));
-    if (multiview) {
-      url.searchParams.set('view', 'multiview');
-      url.searchParams.set('slots', ordered().map((camera) => slotNumber(camera.slot)).join(','));
-      if (multiviewColumns !== 'auto') url.searchParams.set('columns', multiviewColumns);
-    }
+    const url = new URL(makeUrl(room, 'obs', slot, muted));
     if (options.clean) url.searchParams.set('slate', 'off');
     if (typeof options.black === 'boolean') url.searchParams.set('bg', options.black ? 'black' : 'transparent');
     if (options.frame) url.searchParams.set('frame', options.frame);
     if (!roomAccess) return url.href;
-    const { secret } = await roomAccess.request('invite', { role: 'viewer', slot: multiview ? '' : slot });
-    return protectedUrl(url, secret);
+    if (!viewerLinks.has(slot)) viewerLinks.set(slot, roomAccess.request('invite', { role: 'viewer', slot }).catch((error) => { viewerLinks.delete(slot); throw error; }));
+    return protectedUrl(url, (await viewerLinks.get(slot)).secret);
   }
 
   async function copyObsOutput(slot, options, field) {
     try {
       const url = await obsUrl(slot, options?.muted, options);
       if (field) { field.value = url; $('outputUrlRow').hidden = false; }
-      const name = slot === 'multiview' ? 'Multiview' : cameras.get(slot)?.name || 'Program';
+      const name = cameras.get(slot)?.name || 'Program';
       await copy(url, name + ' OBS URL copied');
     } catch (error) { notify(error.message, true); }
   }
@@ -77,7 +72,7 @@ function studio() {
     preview.opener = null;
     try {
       const url = new URL(await obsUrl(slot, muted, options));
-      if (slot !== 'multiview') url.searchParams.set('debug','1');
+      url.searchParams.set('debug','1');
       preview.location.replace(url.href);
     } catch (error) { preview.close(); notify(error.message, true); }
   }
@@ -89,13 +84,11 @@ function studio() {
     const dimensions = sizes[$('outputSize').value].slice();
     if ($('outputCanvas').value === 'vertical') dimensions.reverse();
     $('outputDimensions').textContent = 'Set OBS Browser Source Width and Height to ' + dimensions.join(' × ') + '.';
-    const grid = $('outputChoice').value === 'multiview';
-    $('outputAudio').disabled = grid;
-    $('outputScope').textContent = grid ? 'Multiview is muted and uses Studio’s current camera slots.' : 'Browser Source size sets the OBS canvas. Capture quality is set at the camera.';
+    $('outputScope').textContent = 'Browser Source size sets the OBS canvas. Capture quality is set at the camera.';
     $('outputUrlRow').hidden = true;
   }
   $('openOutputManager').onclick = () => {
-    $('outputChoice').replaceChildren(new Option('Program output', ''), ...ordered().map((camera) => new Option(camera.name, camera.slot)), new Option('Multiview', 'multiview'));
+    $('outputChoice').replaceChildren(new Option('Program output', ''), ...ordered().map((camera) => new Option(camera.name, camera.slot)));
     updateManager();
     $('outputManager').showModal();
   };
@@ -321,7 +314,14 @@ function studio() {
   function syncOutputs(changedSlot) {
     let programs = 0;
     for (const output of subscriptions) {
-      if (!output.slot) programs++;
+      if (!output.slot) {
+        programs++;
+        if (output.link.connection.metadata?.programLayout === true) {
+          const layout = { mode: programLayout, slots: ordered().map((item) => item.slot), columns: multiviewColumns };
+          const signature = JSON.stringify(layout);
+          if (output.layout !== signature) { output.layout = signature; output.link.send({ type: 'layout', ...layout }); }
+        }
+      }
       if (changedSlot && output.slot !== changedSlot) continue;
       const camera = cameras.get(output.slot || program);
       const pairSlot = output.slot || program || selected;
@@ -403,7 +403,7 @@ function studio() {
       const link = new Link(connection, {
         open: (active) => {
           const pipe = !slot && metadata.smoothProgram === true ? new ProgramSender(active) : new MediaPipe(active, true);
-          output = { slot, pipe };
+          output = { slot, pipe, link: active };
           subscriptions.add(output);
           syncOutputs();
         },
@@ -493,17 +493,27 @@ function studio() {
     $('sourceError').hidden = !message;
   }
 
+  async function cameraJoinUrl(slot) {
+    const url = makeUrl(room, 'phone', slot);
+    if (!roomAccess) return url;
+    if (roomAccess.openJoin) return protectedUrl(url);
+    if (!contributorLinks.has(slot)) contributorLinks.set(slot, roomAccess.request('invite', { role: 'contributor', slot }).catch((error) => { contributorLinks.delete(slot); throw error; }));
+    return protectedUrl(url, (await contributorLinks.get(slot)).secret);
+  }
+
   async function renderPair(camera) {
     const token = ++qrToken;
-    if (roomAccess) {
-      $('pairRoute').textContent = 'Create a contributor invitation for ' + camera.name + ' in the room menu.';
+    let url;
+    try { url = await cameraJoinUrl(camera.slot); }
+    catch (error) {
+      if (token !== qrToken) return;
+      $('pairRoute').textContent = error.message;
       $('pairURL').value = '';
-      $('pairQR').hidden = $('pairNotice').hidden = true;
-      $('copyPair').disabled = true;
+      $('pairQR').hidden = $('pairNotice').hidden = $('copyPair').disabled = true;
       return;
     }
+    if (token !== qrToken) return;
     $('copyPair').disabled = false;
-    const url = makeUrl(room, 'phone', camera.slot);
     $('pairURL').value = url;
     $('pairRoute').textContent = 'Scan with your phone to pair this camera. Tap Go live when you’re ready.';
     const offline = localPage() || location.protocol !== 'https:';
@@ -698,6 +708,7 @@ function studio() {
     multiviewColumns = MULTIVIEW_LAYOUTS.includes($('multiviewColumns').value) ? $('multiviewColumns').value : 'auto';
     $('tiles').dataset.columns = multiviewColumns;
     persist();
+    syncOutputs();
   };
   $('audioMonitor').onclick = () => {
     monitoring = !monitoring;
@@ -830,104 +841,23 @@ function studio() {
     $('setupDialog').showModal();
   };
   $('setupCopy').onclick = () => $('copyProgram').click();
-  $('openPhoneSetup').onclick = () => roomAccess ? $('roomButton').click() : window.open(makeUrl(room, 'phone', selected), '_blank', 'noopener');
-
-  let invitesGeneration = 0;
-
-  $('roomButton').onclick = () => {
-    $('roomInput').value = room;
-    $('roomFeedback').textContent = protectedRoom ? 'Private room · Host' : 'Public room · anyone with the ID can connect.';
-    $('inviteManager').hidden = !roomAccess;
-    $('roomInviteLink').hidden = true;
-    $('inviteSlot').replaceChildren(...ordered().map((camera) => new Option(camera.name, camera.slot)));
-    $('inviteSlot').value = selected;
-    $('roomDialog').showModal();
-    if (roomAccess) refreshInvites();
+  $('openPhoneSetup').onclick = () => {
+    $('setupDialog').close();
+    openSource(selected, 'phone');
   };
 
-  function openRoom(code, managed = false) {
-    const url = new URL('index.html', location.href);
-    url.searchParams.set('room', code);
-    if (managed) url.searchParams.set('private', '1');
-    location.assign(url.href);
+  function updateProgramLayout() {
+    const grid = programLayout === 'grid';
+    buttonState($('programMultiview'), grid, grid ? 'Switch OBS output to Program' : 'Switch OBS output to Multiview');
+    $('programMultiview').lastElementChild.textContent = grid ? 'Back to Program' : 'Multiview';
   }
-
-  $('roomForm').onsubmit = (event) => {
-    event.preventDefault();
-    const next = normalizeRoom($('roomInput').value.trim());
-    if (next && (next !== room || protectedRoom)) openRoom(next);
-    else $('roomDialog').close();
+  $('programMultiview').onclick = () => {
+    programLayout = programLayout === 'grid' ? 'program' : 'grid';
+    persist();
+    updateProgramLayout();
+    syncOutputs();
   };
-  $('createRoom').onclick = () => openRoom(randomCode(16));
-  $('openJoin').onclick = () => { location.href = '?join=1'; };
-  $('openDirect').onclick = () => { location.href = '?mode=sender'; };
-  $('createPrivateRoom').onclick = async () => {
-    const button = $('createPrivateRoom');
-    button.disabled = true;
-    try {
-      const created = await AirCastRooms.request('create');
-      AirCastRooms.remember(created.room, created.secret);
-      openRoom(created.room, true);
-    } catch (error) { $('roomFeedback').textContent = error.message; }
-    finally { button.disabled = false; }
-  };
-
-  async function refreshInvites() {
-    const generation = ++invitesGeneration;
-    try {
-      const { grants } = await roomAccess.request('list');
-      if (generation !== invitesGeneration) return;
-      $('roomInvites').replaceChildren(...grants.map((invite) => {
-        const row = document.createElement('div');
-        row.className = 'invite-row';
-        const label = document.createElement('span');
-        const name = invite.slot ? cameras.get(invite.slot)?.name || routeName(invite.slot) : 'All outputs';
-        const link = [...receiverLinks].find((peer) => peer.open && peer.connection.grant === invite.id);
-        label.textContent = (invite.role === 'viewer' ? 'Viewer' : 'Contributor') + ' · ' + name + (link ? ' · Connected' : '');
-        const revoke = document.createElement('button');
-        revoke.type = 'button';
-        revoke.className = 'btn ghost tiny danger';
-        revoke.textContent = 'Revoke';
-        revoke.onclick = async () => {
-          revoke.disabled = true;
-          try {
-            await roomAccess.request('revoke', { id: invite.id });
-            $('roomInviteLink').hidden = true;
-            for (const peer of receiverLinks) if (peer.connection.grant === invite.id) peer.close();
-            await refreshInvites();
-          } catch (error) { $('roomFeedback').textContent = error.message; revoke.disabled = false; }
-        };
-        row.append(label, revoke);
-        return row;
-      }));
-    } catch (error) { $('roomFeedback').textContent = error.message; }
-  }
-
-  async function invitePerson(role, button) {
-    button.disabled = true;
-    try {
-      const slot = role === 'contributor' ? normalizeSlot($('inviteSlot').value) : '';
-      const { secret } = await roomAccess.request('invite', { role, slot });
-      const link = protectedUrl(makeUrl(room, role === 'viewer' ? 'obs' : 'phone', slot), secret);
-      const field = $('roomInviteLink');
-      field.value = link;
-      field.hidden = false;
-      field.select();
-      $('roomFeedback').textContent = 'Copy the invitation to share with the intended participant.';
-      await refreshInvites();
-    } catch (error) { $('roomFeedback').textContent = error.message; }
-    finally { button.disabled = false; }
-  }
-
-  $('inviteCamera').onclick = () => invitePerson('contributor', $('inviteCamera'));
-  $('inviteViewer').onclick = () => invitePerson('viewer', $('inviteViewer'));
-  $('roomRecovery').onclick = async () => {
-    try {
-      await copy(AirCastRooms.recovery(room), 'Host recovery link copied');
-      $('roomFeedback').textContent = 'Keep the recovery link private. It gives the holder host access.';
-    } catch (error) { $('roomFeedback').textContent = error.message; }
-  };
-  $('roomInviteLink').onclick = () => $('roomInviteLink').select();
+  updateProgramLayout();
 
   document.addEventListener('keydown', (event) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.repeat ||

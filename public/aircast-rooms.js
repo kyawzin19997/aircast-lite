@@ -63,41 +63,55 @@ const AirCastRooms = (() => {
     return encoder.encode(JSON.stringify(['aircast-room-v1', id, first, second, sender, receiver]));
   }
 
-  async function request(op, args = {}) {
+  async function request(op, args = {}, keepalive = false) {
     const response = await fetch(new URL('api/rooms', location.href), {
-      method: 'POST', cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(6000),
+      method: 'POST', cache: 'no-store', redirect: 'error', keepalive, signal: AbortSignal.timeout(6000),
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op, ...args })
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'Private rooms are unavailable on this deployment.');
+    if (!response.ok) throw Object.assign(new Error(result.error || 'Room services are unavailable on this deployment.'), { code: result.code, status: response.status });
     return result;
   }
 
   function remember(code, secret) { sessionStorage.setItem(key(code), secret); }
 
-  function recovery(code) {
-    const credential = capability(sessionStorage.getItem(key(code)));
-    if (!credential) throw new Error('The host credential is missing.');
-    const url = new URL(location.href);
-    url.hash = new URLSearchParams({ ticket: credential }).toString();
-    return url.href;
+  async function managed(code) {
+    if (!/^[A-F0-9]{16}$/.test(code)) return false;
+    try { return (await request('info', { room: code })).exists === true; }
+    catch (error) {
+      if (error.status === 410) throw error;
+      return false;
+    }
   }
 
-  async function enter(code, role, camera) {
+  async function enter(code, role, camera, password) {
     const url = new URL(location.href);
     const inLink = capability(new URLSearchParams(url.hash.slice(1)).get('ticket'));
-    const secret = inLink || capability(sessionStorage.getItem(key(code)));
-    if (!code || !secret) throw new Error('Open the private invitation issued by the host.');
+    const sessionKey = role === 'host' ? key(code) : key(code) + ':' + role;
+    let secret = password === undefined ? inLink || capability(sessionStorage.getItem(sessionKey)) : '';
+    if (!code || (role === 'host' && !secret)) throw new Error('Return to the original Studio tab to manage this room.');
     const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign', 'verify']);
     const publicKey = await crypto.subtle.exportKey('jwk', keys.publicKey);
-    const access = await request('enter', { room: code, secret, role, slot: camera, publicKey });
-    remember(code, secret);
+    const details = { room: code, password, role, slot: camera, publicKey };
+    let access;
+    try {
+      access = await request('enter', { ...details, secret });
+    } catch (error) {
+      if (role !== 'viewer' || inLink || !secret || error.status !== 403) throw error;
+      secret = '';
+      sessionStorage.removeItem(sessionKey);
+      access = await request('enter', details);
+    }
+    if (access.resume || secret) sessionStorage.setItem(sessionKey, access.resume || secret);
     if (inLink && role !== 'viewer') {
       url.hash = '';
       history.replaceState(null, '', url);
     }
     const touch = setInterval(() => request('alive', { room: code, session: access.session }).catch(() => {}), 240000);
-    window.addEventListener('pagehide', () => clearInterval(touch), { once: true });
+    window.addEventListener('pagehide', () => {
+      clearInterval(touch);
+      request('leave', { room: code, session: access.session }, true).catch(() => {});
+    }, { once: true });
     return {
       ...access,
       request: (op, payload = {}) => request(op, { ...payload, room: code, session: access.session }),
@@ -197,7 +211,7 @@ const AirCastRooms = (() => {
     return incoming;
   }
 
-  return { room, slot, output, joinTarget, endpoint, request, remember, recovery, enter };
+  return { room, slot, output, joinTarget, endpoint, request, remember, managed, enter };
 })();
 
 if (typeof module !== 'undefined') module.exports = AirCastRooms;

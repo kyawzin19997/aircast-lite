@@ -1,12 +1,12 @@
 'use strict';
 
-function multiviewOutput(room) {
+function multiviewOutput(room, configuredSlots, configuredColumns) {
   if (roomAccess?.slot) return;
-  const slots = [...new Set((query.get('slots') || '1,2,3').split(',').map((n) => normalizeSlot('CAM' + n)).filter(Boolean))].slice(0, 24);
+  const slots = configuredSlots || [...new Set((query.get('slots') || '1,2,3').split(',').map((n) => normalizeSlot('CAM' + n)).filter(Boolean))].slice(0, 24);
   const grid = document.createElement('div');
   grid.className = 'output-grid';
   grid.setAttribute('aria-label', 'Studio Multiview');
-  const columns = Number(query.get('columns'));
+  const columns = Number(configuredColumns ?? query.get('columns'));
   const count = [2, 3, 4].includes(columns) ? columns : Math.max(1, Math.ceil(Math.sqrt(slots.length)));
   grid.style.setProperty('--columns', count);
   grid.style.setProperty('--rows', Math.max(1, Math.ceil(slots.length / count)));
@@ -22,7 +22,7 @@ function multiviewOutput(room) {
     tile.src = roomAccess ? protectedUrl(url) : url.href;
     grid.append(tile);
   }
-  $('output').replaceChildren(grid);
+  return grid;
 }
 
 function obsOutput() {
@@ -40,7 +40,7 @@ function obsOutput() {
   // Keep the sizing chosen by previously copied OBS URLs.
   const legacyFormat = query.get('frame');
   if (['horizontal', 'vertical'].includes(legacyFormat)) $('output').dataset.format = legacyFormat;
-  if (query.get('view') === 'multiview') { multiviewOutput(room); return; }
+  if (query.get('view') === 'multiview') { const legacyGrid = multiviewOutput(room); if (legacyGrid) $('output').replaceChildren(legacyGrid); return; }
   const feeds = new Map();
   const standby = { kind: 'standby' };
   let active = null;
@@ -51,6 +51,8 @@ function obsOutput() {
   let waitingLink;
   let autoplayMuted = false;
   let hasAired = false;
+  let programGrid;
+  let gridSignature;
   const monitor = new DissolveMonitor($('output'), { change: updateSlates });
   $('outputPairRoom').textContent = room;
   $('outputPairKind').textContent = slot ? 'Camera feed' : 'Program';
@@ -67,7 +69,7 @@ function obsOutput() {
       $('outputPairLayout').dataset.manual = 'true';
       hint.textContent = message;
     };
-    if (roomAccess) { showManual('The host can issue a contributor invitation from the private room menu.'); return; }
+    if (roomAccess && !roomAccess.openJoin) { showManual('Ask the host for this camera’s pairing link.'); return; }
     if (!target) {
       showManual('Keep Camera Studio open to get the pairing code.');
       return;
@@ -76,7 +78,8 @@ function obsOutput() {
       showManual('Open AirCast over HTTPS on your phone, enter these connection details, then tap Go live.');
       return;
     }
-    const url = makeUrl(room, 'phone', target);
+    const phoneUrl = makeUrl(room, 'phone', target);
+    const url = roomAccess ? protectedUrl(phoneUrl) : phoneUrl;
     qr.hidden = false;
     delete $('outputPairLayout').dataset.manual;
     hint.textContent = 'Scan the code, enable your camera, then tap Go live.';
@@ -185,8 +188,20 @@ function obsOutput() {
     return { kind, url, audio: value.audio === true, image: outputImage(value.image), idleCamera, paired: value.paired === true };
   }
 
+  function showLayout(message) {
+    const slots = Array.isArray(message.slots) ? [...new Set(message.slots.slice(0, 24).map(normalizeSlot).filter(Boolean))] : [];
+    const columns = message.columns;
+    const next = message.mode === 'grid' && slots.length ? JSON.stringify([slots, columns]) : '';
+    if (gridSignature === next) return;
+    gridSignature = next;
+    programGrid?.remove();
+    programGrid = next ? multiviewOutput(room, slots, columns) : null;
+    if (programGrid) $('output').append(programGrid);
+    $('output').dataset.programLayout = programGrid ? 'grid' : 'program';
+  }
+
   function subscribe(route, target, role) {
-    return new ClientLink(target, { role, slot, smoothProgram: !slot }, {
+    return new ClientLink(target, { role, slot, smoothProgram: !slot, programLayout: !slot }, {
       open(link) {
         const feed = { link, snapshot: standby, stream: null, watching: null };
         feeds.set(route, feed);
@@ -207,6 +222,7 @@ function obsOutput() {
       receive(message, link) {
         const feed = feeds.get(route);
         if (feed?.link !== link) return;
+        if (!slot && route === 'studio' && message.type === 'layout') { showLayout(message); return; }
         if (!slot && message.type === 'program') {
           feed.program ||= new ProgramReceiver(link, {
             parse: parseSnapshot,
@@ -228,6 +244,7 @@ function obsOutput() {
         const feed = feeds.get(route);
         if (feed?.link !== link) return;
         feeds.delete(route);
+        if (route === 'studio' && !slot) showLayout({ mode: 'program' });
         feed.program?.close();
         feed.pipe.close();
         selectFeed();

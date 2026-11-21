@@ -17,9 +17,8 @@
 <script src="./aircast-diagnostics.js"></script>
 <script>
   const query = new URLSearchParams(location.search);
-  const phoneLaunch = query.get('launch') === 'app' && matchMedia('(pointer: coarse)').matches;
   document.documentElement.dataset.view = query.has('obs') || query.get('clean') === 'true'
-    ? 'output' : query.get('mode') === 'sender' || phoneLaunch ? 'phone' : query.has('join') ? 'join' : 'studio';
+    ? 'output' : query.get('mode') === 'sender' ? 'phone' : AirCastRooms.room(query.get('room')) && !query.has('join') ? 'studio' : 'join';
 </script>
 <link rel="stylesheet" href="./aircast.css">
 </head>
@@ -57,15 +56,27 @@
 <main id="roomLanding">
   <section class="panel room-welcome">
     <div class="brand"><span class="brand-mark" data-icon="brand"></span><span>AirCast <em>Lite</em></span></div>
-    <h1 id="joinTitle">Join a room</h1>
+    <h1 id="joinTitle">Camera rooms</h1>
+    <button class="btn accent" id="createRoom" type="button" aria-expanded="false" aria-controls="createRoomForm">Create room</button>
+    <form id="createRoomForm" hidden>
+      <label class="field">Room password (optional)<input type="password" id="createPassword" minlength="6" maxlength="128" autocomplete="new-password"></label>
+      <label class="field">Room expiration<select id="roomExpiry"><option value="0">No expiration</option><option value="1">1 hour</option><option value="4">4 hours</option><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select></label>
+      <button class="btn accent" type="submit">Start Studio</button>
+    </form>
+    <hr class="rule" id="roomDivider">
+    <h2 id="joinHeading">Join a room</h2>
     <form id="joinForm">
       <label class="field">Room ID or invitation link<input type="text" id="joinValue" maxlength="2048" autocomplete="off" required></label>
       <label class="field">Join as<select id="joinRole"><option value="contributor">Camera contributor</option><option value="viewer">Program viewer</option></select></label>
       <label class="field" id="joinSlotField">Camera<select id="joinSlot"></select></label>
       <button class="btn accent" type="submit">Join</button>
     </form>
+    <form id="roomPasswordForm" hidden>
+      <label class="field">Room password<input type="password" id="joinPassword" maxlength="128" autocomplete="current-password" required></label>
+      <button class="btn accent" type="submit">Unlock room</button>
+    </form>
     <p class="small muted" id="joinFeedback" role="status"></p>
-    <div class="group"><a class="btn ghost" href="./index.html">Camera Studio</a><a class="btn ghost" href="?mode=sender">Direct camera</a></div>
+    <a class="btn ghost" id="roomHome" href="./index.html" hidden>Room home</a>
   </section>
 </main>
 
@@ -74,7 +85,7 @@
     <div class="brand"><span class="brand-mark" data-icon="brand"></span><span>AirCast <em>Lite</em></span></div>
     <div class="group">
       <span class="signal hide-small" id="studioSignal" role="status"><span class="dot"></span><span>Connecting</span></span>
-      <button class="btn ghost plain room-btn" id="roomButton" title="Change room"><span class="room-word">Room</span><span class="mono" id="roomCode"></span></button>
+      <a class="btn ghost plain room-btn" id="roomButton" href="./index.html" title="Leave Studio and return to room home"><span class="room-word">Room</span><span class="mono" id="roomCode"></span></a>
       <button class="btn ghost plain" id="setupButton" aria-label="OBS setup"><span data-icon="help"></span><span>OBS setup</span></button>
     </div>
   </div></header>
@@ -120,6 +131,7 @@
               </div>
             </div>
             <div class="group">
+              <button class="btn ghost" id="programMultiview" type="button" aria-pressed="false"><span data-icon="grid"></span><span>Multiview</span></button>
               <button class="btn accent" id="copyProgram"><span data-icon="copy"></span>Copy OBS URL</button>
               <button class="btn ghost square" id="openProgram" title="Open clean output preview" aria-label="Open clean output preview" data-icon="monitor"></button>
             </div>
@@ -196,6 +208,7 @@
     </div>
     <button class="phone-shutter" id="phoneLive" disabled><span class="shutter-ring" aria-hidden="true"></span><span id="phoneLiveLabel">Go live</span></button>
     <div class="phone-toolbar">
+      <button class="btn hud-button square" id="phoneHideCamera" type="button" title="Hide camera from the output" aria-label="Hide camera from the output" aria-pressed="false" data-icon="camera" hidden></button>
       <button class="btn hud-button square" id="phoneMic" title="Enable microphone" aria-label="Enable microphone" aria-pressed="false" data-icon="mic-off"></button>
       <button class="btn hud-button square" id="swapLens" title="Switch front or rear camera" aria-label="Switch front or rear camera" data-icon="lens" disabled></button>
     </div>
@@ -291,32 +304,6 @@
     <details class="details-text"><summary>Network and browser access</summary><p>Open the same HTTPS-hosted page on all devices for phone pairing. A local file works for testing on this computer. Wireless pairing uses the PeerJS signaling service and works best on the same Wi‑Fi. Networks that block peer-to-peer traffic can require a TURN relay. The phone releases its camera and slot when you leave its view.</p></details>
     <div class="group modal-actions"><button class="btn ghost" id="openPhoneSetup"><span data-icon="phone"></span>Open phone camera</button><button class="btn accent" id="setupCopy"><span data-icon="copy"></span>Copy Program URL</button></div>
   </div>
-</dialog>
-
-<dialog id="roomDialog" aria-labelledby="roomTitle">
-  <div class="spread modal-head"><h3 id="roomTitle">Studio room</h3><button class="btn ghost square" data-close aria-label="Close" data-icon="close"></button></div>
-  <form class="modal-body" id="roomForm">
-    <label class="field">Room code<input id="roomInput" maxlength="16" minlength="3" pattern="[A-Za-z0-9]{3,16}" required autocomplete="off" class="mono"></label>
-    <p class="small">Open another public room. Changing rooms releases local sources and disconnects Studio outputs.</p>
-    <div class="group modal-actions"><button class="btn ghost" type="button" data-close>Cancel</button><button class="btn accent" type="submit">Open room</button></div>
-  </form>
-  <section class="modal-body room-actions" aria-label="Room tools">
-    <div class="group">
-      <button type="button" class="btn" id="createRoom">Create room</button>
-      <button type="button" class="btn ghost" id="createPrivateRoom">Create private room</button>
-      <button type="button" class="btn ghost" id="openJoin">Join room</button>
-      <button type="button" class="btn ghost" id="openDirect">Direct camera</button>
-    </div>
-    <p class="small muted" id="roomFeedback" role="status"></p>
-    <section id="inviteManager" hidden><h2>Invitations and camera access</h2>
-      <div class="group invite-controls"><label class="field">Camera<select id="inviteSlot"></select></label>
-        <button type="button" class="btn" id="inviteCamera">Invite contributor</button>
-        <button type="button" class="btn" id="inviteViewer">Invite viewer</button></div>
-      <button type="button" class="btn ghost" id="roomRecovery">Copy host recovery link</button>
-      <input class="url-box mono" id="roomInviteLink" aria-label="Invitation URL" readonly hidden>
-      <div id="roomInvites"></div>
-    </section>
-  </section>
 </dialog>
 
 <dialog id="phoneDialog" aria-labelledby="phoneTitle">
