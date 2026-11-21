@@ -1,18 +1,21 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { EventEmitter } from 'node:events';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { onRequest } from '../functions/api/rooms.js';
-import { inMemoryAuthority } from './server.mjs';
+import { inMemoryBucket } from './server.mjs';
 
 function classic(name) {
   const module = { exports: {} };
-  runInNewContext(readFileSync(new URL('../public/' + name, import.meta.url), 'utf8'), { module, URL, TextEncoder });
+  runInNewContext(readFileSync(new URL('../public/' + name, import.meta.url), 'utf8'),
+    { module, URL, TextEncoder, TextDecoder, Uint8Array, btoa, atob, crypto, Date, setTimeout, clearTimeout, isSecureContext: true });
   return module.exports;
 }
 
 const rooms = classic('aircast-rooms.js');
 const stats = classic('aircast-diagnostics.js');
+const sealed = classic('aircast-sealed.js');
 
 test('legacy and extended camera URLs retain their room and slot', () => {
   for (const [value, room, slot] of [
@@ -25,7 +28,6 @@ test('legacy and extended camera URLs retain their room and slot', () => {
     assert.equal(output.invalidSlot, false);
   }
   assert.equal(rooms.output(new URLSearchParams('?obs=ROOM&c=25')).invalidSlot, true);
-  assert.notEqual(rooms.endpoint('ROOM','CAM1'), rooms.endpoint('ROOM','CAM1',true));
   assert.equal(rooms.joinTarget('https://elsewhere.invalid/?obs=ROOM','https://example.test/index.html','viewer'), null);
   assert.equal(rooms.joinTarget('ROOM','https://example.test/index.html','contributor','CAM20').searchParams.get('cam'), 'CAM20');
 });
@@ -45,63 +47,84 @@ test('stats calculate interval bitrate and loss only from valid deltas', () => {
   assert.equal(stats.sample(report(3000,3,1,1),next.base).loss, null);
 });
 
-test('authority separates host, contributor, and viewer and revokes both session and invite', async () => {
-  const env = { ROOMS: inMemoryAuthority() };
-  const origin = 'https://aircast.test';
-  const call = async (data, status = 200, headers = {}) => {
-    const response = await onRequest({ env, request: new Request(origin + '/api/rooms', { method:'POST',
-      headers:{ Origin: origin, 'Content-Type':'application/json', ...headers }, body:JSON.stringify(data) }) });
-    assert.equal(response.status, status, await response.clone().text());
-    assert.equal(response.headers.get('Cache-Control'),'no-store');
-    return response.json();
-  };
-  const { room, secret } = await call({ op:'create' });
-  const keys = await crypto.subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, false, ['sign','verify']);
-  const publicKey = await crypto.subtle.exportKey('jwk',keys.publicKey);
-  const enter = (secret,role,slot,status) => call({ op:'enter',room,secret,role,slot,publicKey },status);
-  const host = await enter(secret,'host','');
-  const contributor = await call({ op:'invite',room,session:host.session,role:'contributor',slot:'CAM10' });
-  const viewer = await call({ op:'invite',room,session:host.session,role:'viewer',slot:'CAM10' });
-  await enter(viewer.secret,'contributor','CAM10',403);
-  await enter(viewer.secret,'viewer','CAM1',403);
-  const camera = await enter(contributor.secret,'contributor','CAM10');
-  const obs = await enter(viewer.secret,'viewer','CAM10');
-  await call({ op:'invite',room,session:obs.session,role:'viewer',slot:'' },403);
-  const remote = await call({ op:'verify',room,session:obs.session,remoteId:camera.id,peer:camera.peer });
-  assert.equal(remote.role,'contributor');
-  assert.equal(remote.slot,'CAM10');
-  await call({ op:'verify',room,session:obs.session,remoteId:camera.id,peer:host.peer },403);
-  await call({ op:'revoke',room,session:host.session,id:viewer.id });
-  await call({ op:'verify',room,session:obs.session,remoteId:camera.id,peer:camera.peer },403);
-  await enter(viewer.secret,'viewer','CAM10',403);
-  await call({ op:'list',room,session:host.session },403,{ Origin:'https://outside.invalid' });
+test('room encryption uses independent nonces and authenticates password, room ID, and ciphertext', async () => {
+  const room = 'AIRCASTROOM22222';
+  const password = 'private broadcast passphrase';
+  const first = await sealed.create(room, password, 0);
+  const second = await sealed.create(room, password, 0);
+  const [, , salt, iv, ciphertext] = first.envelope.split('.');
+  assert.notEqual(salt, second.envelope.split('.')[2]);
+  assert.notEqual(iv, second.envelope.split('.')[3]);
+  assert.notEqual(iv, first.recovery.split('.')[0]);
+  const fromGuest = await sealed.unlock(room, first.envelope, password);
+  const fromHost = await sealed.unlock(room, first.envelope, password, first.recovery);
+  assert.equal(fromGuest.namespace, first.access.namespace);
+  assert.equal(fromHost.namespace, first.access.namespace);
+  assert.notEqual(first.access.namespace, second.access.namespace);
+  const tampered = first.envelope.replace(ciphertext, (ciphertext[0] === 'A' ? 'B' : 'A') + ciphertext.slice(1));
+  const failed = { message: 'Incorrect password or corrupted room data.', code: 'ROOM_PASSWORD' };
+  await assert.rejects(sealed.unlock(room, first.envelope, 'incorrect passphrase'), failed);
+  await assert.rejects(sealed.unlock(room, tampered, password), failed);
+  await assert.rejects(sealed.unlock('AIRCASTROOM33333', first.envelope, password), failed);
 });
 
-test('open rooms allow passwordless pairing and optional expiry invalidates all roles', async (t) => {
-  const env = { ROOMS: inMemoryAuthority() };
+test('encrypted links authenticate the live transport and require the creator signature for Studio', async () => {
+  const code = 'AIRCASTROOM22222';
+  const password = 'private broadcast passphrase';
+  const { access: host, envelope } = await sealed.create(code, password, 0);
+  const viewer = await sealed.unlock(code, envelope, password);
+  const link = (local, remote, received = remote) => Object.assign(new EventEmitter(), {
+    open: true, provider: { id: local }, peer: remote,
+    metadata: { role: 'output', slot: '', programLayout: true },
+    peerConnection: {
+      localDescription: { sdp: 'a=fingerprint:fixture ' + local },
+      remoteDescription: { sdp: 'a=fingerprint:fixture ' + received }
+    }
+  });
+  async function connect(publisher, hostFingerprint = 'studio') {
+    const studio = link('studio', 'obs');
+    const obs = link('obs', 'studio', hostFingerprint);
+    for (const [from, to] of [[studio, obs], [obs, studio]]) {
+      from.send = (message) => queueMicrotask(() => to.emit('data', message));
+      from.close = () => {
+        if (!from.open) return;
+        from.open = to.open = false;
+        from.emit('close');
+        to.emit('close');
+      };
+    }
+    return Promise.allSettled([
+      publisher.gate(studio, { role: 'host', slot: '' }, (peer) => peer.role === 'viewer'),
+      viewer.gate(obs, { role: 'viewer', slot: '' }, (peer) => peer.role === 'host')
+    ]);
+  }
+  const result = await connect(host);
+  assert.ok(result.every((endpoint) => endpoint.status === 'fulfilled'));
+  result[0].value.close();
+  assert.ok((await connect(viewer)).every((endpoint) => endpoint.status === 'rejected'));
+  assert.ok((await connect(host, 'substituted')).every((endpoint) => endpoint.status === 'rejected'));
+});
+
+test('R2 accepts only encrypted manifests or public expiry metadata, with immutable writes and expiring reads', async (t) => {
   const origin = 'https://aircast.test';
-  const send = async (data, status = 200) => {
-    const response = await onRequest({ env, request: new Request(origin + '/api/rooms', {
-      method: 'POST', headers: { Origin: origin }, body: JSON.stringify(data)
-    }) });
-    assert.equal(response.status, status, await response.clone().text());
-    return response.json();
-  };
-  const open = await send({ op: 'create', openJoin: true, hours: 0 });
-  const locked = await send({ op: 'create', openJoin: true, password: 'camera-pass', hours: 1 });
-  assert.equal((await send({ op: 'info', room: open.room })).expires, null);
-  const { expires } = await send({ op: 'info', room: locked.room });
-  const keys = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign','verify']);
-  const publicKey = await crypto.subtle.exportKey('jwk', keys.publicKey);
-  const enter = (room, role, args, status) => send({ op: 'enter', room, role, publicKey, ...args }, status);
-  const phone = await enter(open.room, 'contributor', { slot: 'CAM24' });
-  assert.equal(phone.slot, 'CAM24');
-  const viewer = await enter(locked.room, 'viewer', { password: 'camera-pass' });
-  await enter(locked.room, 'host', { password: 'camera-pass' }, 403);
-  await send({ op: 'leave', room: locked.room, session: viewer.session });
-  await enter(locked.room, 'viewer', { secret: viewer.resume });
+  const room = 'AIRCASTROOM22222';
+  const address = origin + '/api/rooms?room=' + room;
+  const expires = Date.now() + 3600000;
+  const env = { ROOM_ENVELOPES: inMemoryBucket() };
+  const send = (method, body, site = origin, runtime = env) => onRequest({
+    env: runtime, request: new Request(address, { method, body, headers: { Origin: site } })
+  });
+  const { envelope } = await sealed.create(room, 'private broadcast passphrase', expires);
+  assert.equal((await send('POST', envelope, origin, {})).status, 501);
+  assert.equal((await send('POST', '{"password":"plaintext"}')).status, 400);
+  assert.equal((await send('POST', envelope, 'https://elsewhere.invalid')).status, 403);
+  assert.equal((await send('POST', envelope)).status, 201);
+  assert.equal((await send('POST', '0.' + expires)).status, 409);
+  assert.equal((await send('DELETE')).status, 405);
+  const stored = await send('GET');
+  assert.equal(await stored.text(), envelope);
+  assert.equal(stored.headers.get('Cache-Control'), 'no-store');
   t.mock.method(Date, 'now', () => expires + 1);
-  assert.equal((await send({ op: 'info', room: locked.room }, 410)).code, 'ROOM_EXPIRED');
-  await enter(locked.room, 'host', { secret: locked.secret }, 410);
-  await enter(open.room, 'viewer');
+  assert.equal((await send('GET')).status, 410);
+  await assert.rejects(sealed.unlock(room, envelope, 'private broadcast passphrase'), { code: 'ROOM_EXPIRED' });
 });

@@ -424,7 +424,6 @@ function phone() {
     $('phoneConnectionHint').hidden = !hint;
     $('phoneConnect').disabled = same && Boolean(session);
     $('phoneConnect').textContent = same && session ? (paired ? 'Connected' : ready ? 'Ready' : status + '…') : same && failed ? 'Retry' : 'Connect';
-    $('phoneCopyObs').hidden = Boolean(roomAccess && !roomAccess.openJoin);
     $('phoneCopyObs').disabled = !form.room;
     $('phoneDisconnect').hidden = !session;
     $('phoneRetry').hidden = !failed;
@@ -955,8 +954,10 @@ function phone() {
     const target = formDestination();
     event.submitter.disabled = true;
     try {
-      if (!roomAccess && await AirCastRooms.managed(target.room)) {
-        location.assign(protectedUrl(makeUrl(target.room, 'phone', target.slot)));
+      const address = new URL(makeUrl(target.room, 'phone', target.slot));
+      const manifest = roomAccess ? null : await findRoom(target.room, address);
+      if (manifest) {
+        location.assign(roomLink(address, target.room, manifest));
         return;
       }
       connectPhone(target);
@@ -967,7 +968,7 @@ function phone() {
     const { room, slot } = formDestination();
     if (!room) return;
     const url = makeUrl(room, 'obs', slot);
-    if (await copy(roomAccess ? protectedUrl(url) : url, routeName(slot) + ' OBS URL copied')) {
+    if (await copy(url, routeName(slot) + ' OBS URL copied')) {
       const label = $('phoneCopyObs').lastElementChild;
       label.textContent = 'Copied';
       clearTimeout(copyObsTimer);

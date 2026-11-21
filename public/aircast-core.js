@@ -37,12 +37,6 @@ function turnServers(entries) {
 
 function loadRelayServers() {
   const path = document.querySelector('meta[name="aircast-ice-endpoint"]')?.content.trim();
-  if (!path && roomAccess) {
-    if (relayRequest) return relayRequest;
-    if (relayServers.length) return;
-    relayRequest = roomAccess.request('turn').then((data) => { relayServers = turnServers(data.iceServers); }).catch(() => {}).finally(() => { relayRequest = null; });
-    return relayRequest;
-  }
   if (!path || !['http:', 'https:'].includes(location.protocol)) return;
   let url;
   try { url = new URL(path, location.href); } catch { return; }
@@ -66,7 +60,7 @@ function rtcConfiguration() {
   return { iceServers: [...STUN_SERVERS, ...relays] };
 }
 const PROTOCOL = 'aircast-lite-v3';
-const protectedRoom = query.get('private') === '1';
+let roomManifest;
 let roomAccess;
 const CAMERA_SLOTS = Array.from({ length: 24 }, (_, index) => 'CAM' + (index + 1));
 const DEFAULT_SLOTS = CAMERA_SLOTS.slice(0, 3);
@@ -97,6 +91,13 @@ const normalizeSlot = AirCastRooms.slot;
 const slotNumber = (slot) => Number(slot.slice(3));
 const profile = (quality) => PROFILES[quality] || PROFILES['720'];
 
+function sizeProgramGrid(grid, slots, columns) {
+  const requested = Number(columns);
+  const count = [2, 3, 4].includes(requested) ? requested : Math.max(1, Math.ceil(Math.sqrt(slots)));
+  grid.style.setProperty('--columns', count);
+  grid.style.setProperty('--rows', Math.max(1, Math.ceil(slots / count)));
+}
+
 function makeUrl(room, view, slot, muted = false) {
   const url = new URL(location.href);
   url.hash = '';
@@ -110,15 +111,22 @@ function makeUrl(room, view, slot, muted = false) {
     if (slot) url.searchParams.set('cam', slot);
   }
   if (muted) url.searchParams.set('mute', '1');
-  return url.href;
+  return roomLink(url, room);
+}
+
+function roomLink(address, room, manifest = roomManifest) {
+  if (manifest?.room !== room) return address.href;
+  if (manifest.envelope !== undefined) return AirCastSealed.link(address, manifest.envelope, manifest.stored);
+  if (manifest.expires) address.searchParams.set('until', manifest.expires);
+  return address.href;
 }
 
 function endpoint(room) {
-  return AirCastRooms.endpoint(room, null, protectedRoom);
+  return roomAccess ? 'AIRCAST-SEALED-HUB-' + roomAccess.namespace : AirCastRooms.endpoint(room, null);
 }
 
 function cameraEndpoint(room, slot) {
-  return AirCastRooms.endpoint(room, slot, protectedRoom);
+  return roomAccess ? 'AIRCAST-SEALED-CAM-' + roomAccess.namespace + '-' + slot : AirCastRooms.endpoint(room, slot);
 }
 
 const incomingCaps = new WeakMap();
@@ -160,13 +168,6 @@ function acceptProtectedRole(connection, remote) {
   if (roomAccess.role === 'host' && role === 'output') return remote.role === 'viewer' && (!remote.slot || remote.slot === camera);
   return roomAccess.role === 'contributor' && role === 'direct-viewer' && remote.role === 'viewer' &&
     camera === roomAccess.slot && (!remote.slot || remote.slot === camera);
-}
-
-function protectedUrl(url, secret) {
-  const address = new URL(url);
-  address.searchParams.set('private', '1');
-  if (secret) address.hash = new URLSearchParams({ ticket: secret }).toString();
-  return address.href;
 }
 
 function httpURL(value) {
@@ -581,7 +582,7 @@ class Signaler {
       const [Peer] = await Promise.all([loadLibrary('Peer'), loadRelayServers()]);
       if (this.closed) return;
       const options = { config: rtcConfiguration(), secure: true, debug: 0 };
-      const peer = new Peer(this.id || (roomAccess ? roomAccess.peer + '-' + randomCode(12) : 'AIRCAST-CLIENT-' + randomCode(20)), options);
+      const peer = new Peer(this.id || 'AIRCAST-CLIENT-' + randomCode(20), options);
       this.peer = peer;
       let idTaken = false;
       peer.on('open', () => {
@@ -597,7 +598,8 @@ class Signaler {
         if (this.closed || this.peer !== peer || connection.label !== PROTOCOL || !this.accept) connection.close();
         else if (roomAccess) {
           if (!claimAdmission(this, connection)) return;
-          roomAccess.gate(connection, (remote) => acceptProtectedRole(connection, remote)).then((authorized) => {
+          const { role, slot } = roomAccess;
+          roomAccess.gate(connection, { role, slot }, (remote) => acceptProtectedRole(connection, remote)).then((authorized) => {
             if (this.closed || this.peer !== peer || !authorized.open) { authorized.close(); return; }
             this.accept(authorized);
           }).catch(() => {});
@@ -781,8 +783,9 @@ class ClientLink {
     this.handlers.status?.('Connecting to destination');
     if (roomAccess) {
       this.pending = connection;
-      const remote = this.target.startsWith('AIRCAST-PRIVATE-CAM-') ? 'contributor' : 'host';
-      roomAccess.gate(connection, (peer) => peer.role === remote && (remote !== 'contributor' || peer.slot === this.metadata.slot),
+      const remote = this.target.startsWith('AIRCAST-SEALED-CAM-') ? 'contributor' : 'host';
+      const { role, slot } = roomAccess;
+      roomAccess.gate(connection, { role, slot }, (peer) => peer.role === remote && (remote !== 'contributor' || peer.slot === this.metadata.slot),
         (error) => { if (!this.closed) this.handlers.status?.(error.message, 'bad'); }).then((authorized) => {
         if (this.closed || this.pending !== connection || !authorized.open) { authorized.close(); return; }
         this.pending = null;

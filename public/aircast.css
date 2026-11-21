@@ -418,7 +418,9 @@ html[data-view=join] #roomLanding { display: grid; min-height: 100dvh; place-ite
 .output-grid[data-background=black], #output[data-background=black] { background: #000; }
 #output[data-background=transparent].has-media, #output[data-background=transparent] .dissolve-layer { background: transparent; }
 .output-grid iframe { width: 100%; height: 100%; display: block; border: 0; color-scheme: normal; }
-#output[data-program-layout=grid] > :is(.dissolve-layer,.output-pair) { opacity: 0; }
+#output[data-program-layout=grid] > :is(.dissolve-layer,.output-pair),
+#programView[data-program-layout=grid] > :is(.dissolve-layer,#programEmpty,.framing-guide) { visibility: hidden; }
+#programGrid { background: #000; }
 .output-grid { z-index: 3; }
 #phoneHideCamera { grid-column: -2 / -1; grid-row: 1; }
 .phone-toolbar:has(#phoneHideCamera:not([hidden])) :is(#phoneMic,#swapLens) { grid-row: 2; }

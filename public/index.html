@@ -14,6 +14,7 @@
 <meta name="description" content="AirCast Lite camera routing for OBS Studio">
 <title>AirCast Lite · Camera Studio</title>
 <script src="./aircast-rooms.js"></script>
+<script src="./aircast-sealed.js"></script>
 <script src="./aircast-diagnostics.js"></script>
 <script>
   const query = new URLSearchParams(location.search);
@@ -59,7 +60,7 @@
     <h1 id="joinTitle">Camera rooms</h1>
     <button class="btn accent" id="createRoom" type="button" aria-expanded="false" aria-controls="createRoomForm">Create room</button>
     <form id="createRoomForm" hidden>
-      <label class="field">Room password (optional)<input type="password" id="createPassword" minlength="6" maxlength="128" autocomplete="new-password"></label>
+      <label class="field">Room password (optional)<input type="password" id="createPassword" minlength="12" maxlength="128" autocomplete="new-password" placeholder="12 characters minimum"></label>
       <label class="field">Room expiration<select id="roomExpiry"><option value="0">No expiration</option><option value="1">1 hour</option><option value="4">4 hours</option><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select></label>
       <button class="btn accent" type="submit">Start Studio</button>
     </form>
@@ -108,6 +109,7 @@
           </div>
           <div class="viewport program-stage" id="programView">
             <div class="framing-guide" aria-hidden="true"><b></b><b></b><b></b><b></b></div>
+            <div class="output-grid" id="programGrid" aria-label="Program Multiview" hidden></div>
             <div class="empty" id="programEmpty">
               <span class="empty-icon" data-icon="camera"></span>
               <strong id="emptyTitle">No camera on program</strong>

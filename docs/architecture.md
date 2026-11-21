@@ -3,25 +3,25 @@
 | Component | Responsibility |
 | --- | --- |
 | `public/index.html` and `aircast.css` | Page structure and styles |
-| `aircast-rooms.js` | URL compatibility, private entry, and peer verification |
+| `aircast-rooms.js` and `aircast-sealed.js` | URL compatibility, room encryption, and peer authentication |
 | `aircast-core.js` | Shared monitor, signaling, WebRTC media, and Program transitions |
 | `aircast-studio.js`, `aircast-phone.js`, `aircast-output.js` | Host, camera, and OBS workflows |
 | `aircast-diagnostics.js` | On-demand connection statistics |
-| `infra/room-authority.mjs` and `functions/api/rooms.js` | Optional room authority and Pages entry point |
+| `functions/api/rooms.js` | Optional R2-backed room manifest storage |
 
-The browser loads classic scripts to support both a static deployment and local file-based OBS setup. The service worker caches only the app shell. Private room requests and temporary TURN credentials use uncached API responses.
+The browser loads classic scripts for static deployment and local file-based public OBS setup. Encrypted rooms use HTTPS or localhost. The service worker caches only the app shell. Room manifests and temporary TURN credentials use uncached API responses.
 
 ## Media ownership
 
-An individual phone feed can use the phone directly. When Studio is available and has presented a matching source, an individual output prefers the Studio path so duplicate viewers do not need separate phone uploads. Studio sends layout changes to the Program receiver over its existing connection. The receiver renders muted Studio-only feeds in Multiview and preserves Program audio. Older standalone Multiview URLs still use their original pinned slot list.
+An individual phone feed can use the phone directly. When Studio is available and has presented a matching source, an individual output prefers the Studio path so duplicate viewers do not need separate phone uploads. Studio renders Program Multiview from its local camera streams and sends the same slot layout to the Program receiver. OBS reuses its muted Studio-only feeds as the columns or slot list changes, preserving Program audio. Older standalone Multiview URLs still use their pinned slot list.
 
 PeerJS brokers WebRTC connections. A bounded JSON control channel handles health, media negotiation, pause state, and Program transitions. `MediaPipe` carries media over a separate peer connection. Program stages the next feed before retiring the previous one. Direct camera subscribers retain the current feed until the Studio replacement is presented.
 
-## Public and private rooms
+## Public and encrypted rooms
 
-Public routes and legacy public OBS URLs use their original signaling namespace. Managed rooms have a separate namespace. The authority admits contributors and viewers according to the room’s password policy, then assigns a role and camera scope. Host credentials stay separate. Existing invitation-based rooms retain their original access rules.
+Public routes and legacy public OBS URLs use their original signaling namespace. An encrypted manifest holds a random membership secret and the Studio signing public key. Browsers derive a routing namespace from the membership secret and authenticate peers using fresh challenges bound to peer IDs, role, slot, and DTLS fingerprints. Studio also proves possession of its separate signing key. The viewer’s same-origin Multiview frames reuse the already unlocked in-memory room context.
 
-The authority binds each admitted session’s public key and assigned peer ID. Peers sign a fresh challenge tied to the peer IDs and DTLS fingerprints for each link. A viewer may access only its assigned slot or the room output scope. Peers periodically recheck authorization. New rooms expire at the time chosen by the creator, if any. Browser storage keeps per-room configuration and camera framing. Live streams remain browser-owned.
+The optional Pages Function accepts immutable room records. Studio’s encrypted recovery credential and camera framing remain in the browser. Only the shared encrypted manifest is uploaded. Live streams remain browser-owned and are encrypted by WebRTC. See [Security](../SECURITY.md) for the trust model and expiry limits.
 
 ## Vendored libraries
 

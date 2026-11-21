@@ -1,26 +1,25 @@
 'use strict';
 
-function multiviewOutput(room, configuredSlots, configuredColumns) {
-  if (roomAccess?.slot) return;
+function multiviewOutput(room, configuredSlots, configuredColumns, grid = document.createElement('div')) {
   const slots = configuredSlots || [...new Set((query.get('slots') || '1,2,3').split(',').map((n) => normalizeSlot('CAM' + n)).filter(Boolean))].slice(0, 24);
-  const grid = document.createElement('div');
   grid.className = 'output-grid';
   grid.setAttribute('aria-label', 'Studio Multiview');
-  const columns = Number(configuredColumns ?? query.get('columns'));
-  const count = [2, 3, 4].includes(columns) ? columns : Math.max(1, Math.ceil(Math.sqrt(slots.length)));
-  grid.style.setProperty('--columns', count);
-  grid.style.setProperty('--rows', Math.max(1, Math.ceil(slots.length / count)));
+  sizeProgramGrid(grid, slots.length, configuredColumns ?? query.get('columns'));
   grid.dataset.background = query.get('bg') === 'black' ? 'black' : 'transparent';
-  for (const slot of slots) {
+  const existing = new Map(Array.from(grid.children, (tile) => [tile.dataset.slot, tile]));
+  for (const [slot, tile] of existing) if (!slots.includes(slot)) tile.remove();
+  for (const [index, slot] of slots.entries()) {
+    if (existing.has(slot)) continue;
     const url = new URL(makeUrl(room, 'obs', slot, true));
     url.searchParams.set('studio', '1');
     url.searchParams.set('slate', 'off');
     url.searchParams.set('bg', 'transparent');
     const tile = document.createElement('iframe');
     tile.title = routeName(slot);
+    tile.dataset.slot = slot;
     tile.allow = 'autoplay';
-    tile.src = roomAccess ? protectedUrl(url) : url.href;
-    grid.append(tile);
+    tile.src = url.href;
+    grid.insertBefore(tile, grid.children[index] || null);
   }
   return grid;
 }
@@ -69,7 +68,6 @@ function obsOutput() {
       $('outputPairLayout').dataset.manual = 'true';
       hint.textContent = message;
     };
-    if (roomAccess && !roomAccess.openJoin) { showManual('Ask the host for this camera’s pairing link.'); return; }
     if (!target) {
       showManual('Keep Camera Studio open to get the pairing code.');
       return;
@@ -78,8 +76,7 @@ function obsOutput() {
       showManual('Open AirCast over HTTPS on your phone, enter these connection details, then tap Go live.');
       return;
     }
-    const phoneUrl = makeUrl(room, 'phone', target);
-    const url = roomAccess ? protectedUrl(phoneUrl) : phoneUrl;
+    const url = makeUrl(room, 'phone', target);
     qr.hidden = false;
     delete $('outputPairLayout').dataset.manual;
     hint.textContent = 'Scan the code, enable your camera, then tap Go live.';
@@ -194,9 +191,13 @@ function obsOutput() {
     const next = message.mode === 'grid' && slots.length ? JSON.stringify([slots, columns]) : '';
     if (gridSignature === next) return;
     gridSignature = next;
-    programGrid?.remove();
-    programGrid = next ? multiviewOutput(room, slots, columns) : null;
-    if (programGrid) $('output').append(programGrid);
+    if (next) {
+      programGrid = multiviewOutput(room, slots, columns, programGrid);
+      if (!programGrid.isConnected) $('output').append(programGrid);
+    } else {
+      programGrid?.remove();
+      programGrid = undefined;
+    }
     $('output').dataset.programLayout = programGrid ? 'grid' : 'program';
   }
 

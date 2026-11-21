@@ -10,13 +10,15 @@ Select **Create room** on the home page. Choose a password and an expiration if 
 
 ![AirCast home page with optional room password and expiration settings](docs/images/room-home.png)
 
-Add the **Program** URL to OBS once. Select **Multiview** in Studio’s Program controls to send the camera grid to that same OBS source. Select **Program** in the same control to return to the live camera. Multiview carries audio from the selected Program camera. Use **Add view** to configure up to 24 slots.
+Add the **Program** URL to OBS once. Select **Multiview** in Studio’s Program controls to show the same camera grid in Studio’s Program monitor and the OBS source. Select **Back to Program** to return both to the selected camera. Multiview carries audio from the selected Program camera. Use **Add view** to configure up to 24 slots.
 
 Open **Outputs** for Browser Source dimensions, individual camera links, and clean-feed, mute, and background settings. Press **D** in an interactive output or choose **Connection diagnostics** in Camera settings for connection status and video statistics.
 
 ![AirCast Output Manager showing Program Browser Source settings](docs/images/output-manager.png)
 
-Passwords and expiration require the Cloudflare [room authority](docs/cloudflare-pages.md#enable-passwords-and-expiration). A QR opens the assigned camera slot directly in an open room. A protected room asks for the password before opening the slot. Studio’s copied OBS links carry viewer access for the selected output. Share them only with intended viewers and OBS operators.
+A password of at least 12 characters encrypts the room in the browser. Share the full OBS or camera link or its QR code, then give the password to participants separately. A QR opens the assigned slot directly in an open room. Protected rooms ask for the password. When using a protected Browser Source in OBS, open **Interact** to enter it. Reopening the source or refreshing its browser page requires unlocking again.
+
+Encrypted links work on static HTTPS hosting. The optional Cloudflare R2 setup enables shorter links, joining encrypted rooms by Room ID, and server-side expiry of future downloads. AirCast also closes expired room connections in its clients. [Cloudflare storage and expiry](docs/cloudflare-pages.md#optional-encrypted-room-storage)
 
 ![AirCast Studio showing the live Program monitor, Multiview, and the Program framing controls](docs/images/studio.png)
 

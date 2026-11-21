@@ -3,13 +3,11 @@
 function studio() {
   const legacy = saved(KEY);
   const room = normalizeRoom(query.get('room'));
-  const roomKey = 'aircast-room:' + (protectedRoom ? 'private:' : 'public:') + room;
+  const roomKey = 'aircast-room:' + (roomAccess ? 'sealed:' : 'public:') + room;
   const existing = saved(roomKey);
-  const stored = existing.room ? existing : !protectedRoom && normalizeRoom(legacy.room) === room ? legacy : {};
+  const stored = existing.room ? existing : !roomAccess && normalizeRoom(legacy.room) === room ? legacy : {};
   let multiviewColumns = MULTIVIEW_LAYOUTS.includes(stored.multiviewColumns) ? stored.multiviewColumns : 'auto';
   let programLayout = stored.programLayout === 'grid' ? 'grid' : 'program';
-  const viewerLinks = new Map();
-  const contributorLinks = new Map();
   let signaler;
   let selected = '';
   let dialogSlot = '';
@@ -21,6 +19,7 @@ function studio() {
   let programImage = imageSettings(stored.programImage, true);
   const cameras = new Map();
   const subscriptions = new Set();
+  const programTiles = new Map();
   const attempts = new Map();
   const receiverLinks = new Set();
   const cards = new Map();
@@ -52,9 +51,7 @@ function studio() {
     if (options.clean) url.searchParams.set('slate', 'off');
     if (typeof options.black === 'boolean') url.searchParams.set('bg', options.black ? 'black' : 'transparent');
     if (options.frame) url.searchParams.set('frame', options.frame);
-    if (!roomAccess) return url.href;
-    if (!viewerLinks.has(slot)) viewerLinks.set(slot, roomAccess.request('invite', { role: 'viewer', slot }).catch((error) => { viewerLinks.delete(slot); throw error; }));
-    return protectedUrl(url, (await viewerLinks.get(slot)).secret);
+    return url.href;
   }
 
   async function copyObsOutput(slot, options, field) {
@@ -269,12 +266,16 @@ function studio() {
     const selectTile = tile.querySelector('.tile-select');
     selectTile.title = selectTile.ariaLabel = camera.ready ? 'Cut to ' + camera.name : 'Set up ' + camera.name;
     tileMonitor.display({ stream: camera.ready ? camera.stream : null, url: camera.kind === 'mjpeg' ? camera.url : '', image: cameraImage(camera) });
+    if (programTiles.has(camera.slot)) displayProgramTile(camera, programTiles.get(camera.slot));
     $('cameraCount').textContent = [...cameras.values()].filter((source) => source.ready || (source.kind === 'phone' && source.link?.open)).length + ' connected';
     if ($('sourceDialog').open && sourceView === 'usb' && camera.slot === dialogSlot) updateUsbPreview();
     if (output) {
       if (camera.slot === selected) refreshExtras();
       if (camera.slot === program) updateProgram();
-      else syncOutputs(camera.slot);
+      else {
+        if (programLayout === 'grid') updateProgramBadge();
+        syncOutputs(camera.slot);
+      }
     }
   }
 
@@ -286,12 +287,48 @@ function studio() {
     return outputImage(combineImages(cameraImage(camera), programImage));
   }
 
+  function displayProgramTile(camera, tile) {
+    tile.display({ stream: camera.ready ? camera.stream : null, url: camera.ready ? camera.url : '', image: outputImage(cameraImage(camera)) });
+  }
+
+  function updateProgramGrid() {
+    const grid = $('programGrid');
+    const enabled = programLayout === 'grid';
+    $('programView').dataset.programLayout = programLayout;
+    grid.hidden = !enabled;
+    for (const [slot, tile] of programTiles) {
+      if (enabled && cameras.has(slot)) continue;
+      tile.destroy();
+      tile.root.remove();
+      programTiles.delete(slot);
+    }
+    if (!enabled) return;
+    sizeProgramGrid(grid, cameras.size, multiviewColumns);
+    for (const [index, camera] of ordered().entries()) {
+      let tile = programTiles.get(camera.slot);
+      if (!tile) {
+        const cell = document.createElement('div');
+        cell.className = 'viewport program-cell';
+        cell.dataset.slot = camera.slot;
+        tile = new Monitor(cell);
+        programTiles.set(camera.slot, tile);
+      }
+      if (grid.children[index] !== tile.root) grid.insertBefore(tile.root, grid.children[index] || null);
+      displayProgramTile(camera, tile);
+    }
+  }
+
+  function updateProgramBadge() {
+    const grid = programLayout === 'grid';
+    const active = grid ? [...cameras.values()].some((camera) => camera.ready) : Boolean(cameras.get(program)?.ready);
+    $('programBadge').dataset.live = String(active);
+    $('programBadge').lastElementChild.textContent = grid ? 'Multiview' : active ? 'On program' : 'Standby';
+  }
+
   function updateProgram() {
     const camera = cameras.get(program);
     const active = Boolean(camera?.ready);
-    const label = active ? 'On program' : 'Standby';
-    $('programBadge').dataset.live = String(active);
-    $('programBadge').lastElementChild.textContent = label;
+    updateProgramBadge();
     $('programStandby').hidden = !program;
     $('programName').hidden = !camera;
     $('programName').textContent = camera?.name || '';
@@ -304,6 +341,7 @@ function studio() {
       stream: active ? camera.stream : null, url: active ? camera.url : '',
       image: programFraming(camera), show: active, muted: !monitoring
     });
+    updateProgramGrid();
     syncOutputs();
   }
 
@@ -383,7 +421,7 @@ function studio() {
 
   function startRoom() {
     $('roomCode').textContent = room;
-    $('roomButton').title = protectedRoom ? 'Private room' : 'Public room';
+    $('roomButton').title = roomAccess ? 'Encrypted room' : 'Public room';
     signaler = new Signaler(endpoint(room), (message, tone) => {
       setSignal($('studioSignal'), message, tone);
     });
@@ -427,7 +465,7 @@ function studio() {
           if (!camera || cameras.get(slot) !== camera) { rejectPair(link, 'unknown-slot'); return; }
           const prior = camera.link;
           const occupied = camera.kind && camera.kind !== 'phone';
-          if (occupied || (prior && (roomAccess ? prior.connection.grant !== connection.grant : prior.connection.metadata?.identity !== metadata.identity))) {
+          if (occupied || (prior && prior.connection.metadata?.identity !== metadata.identity)) {
             rejectPair(link, 'occupied');
             return;
           }
@@ -493,27 +531,9 @@ function studio() {
     $('sourceError').hidden = !message;
   }
 
-  async function cameraJoinUrl(slot) {
-    const url = makeUrl(room, 'phone', slot);
-    if (!roomAccess) return url;
-    if (roomAccess.openJoin) return protectedUrl(url);
-    if (!contributorLinks.has(slot)) contributorLinks.set(slot, roomAccess.request('invite', { role: 'contributor', slot }).catch((error) => { contributorLinks.delete(slot); throw error; }));
-    return protectedUrl(url, (await contributorLinks.get(slot)).secret);
-  }
-
   async function renderPair(camera) {
     const token = ++qrToken;
-    let url;
-    try { url = await cameraJoinUrl(camera.slot); }
-    catch (error) {
-      if (token !== qrToken) return;
-      $('pairRoute').textContent = error.message;
-      $('pairURL').value = '';
-      $('pairQR').hidden = $('pairNotice').hidden = $('copyPair').disabled = true;
-      return;
-    }
-    if (token !== qrToken) return;
-    $('copyPair').disabled = false;
+    const url = makeUrl(room, 'phone', camera.slot);
     $('pairURL').value = url;
     $('pairRoute').textContent = 'Scan with your phone to pair this camera. Tap Go live when you’re ready.';
     const offline = localPage() || location.protocol !== 'https:';
@@ -708,6 +728,7 @@ function studio() {
     multiviewColumns = MULTIVIEW_LAYOUTS.includes($('multiviewColumns').value) ? $('multiviewColumns').value : 'auto';
     $('tiles').dataset.columns = multiviewColumns;
     persist();
+    updateProgramGrid();
     syncOutputs();
   };
   $('audioMonitor').onclick = () => {
@@ -855,7 +876,7 @@ function studio() {
     programLayout = programLayout === 'grid' ? 'program' : 'grid';
     persist();
     updateProgramLayout();
-    syncOutputs();
+    updateProgram();
   };
   updateProgramLayout();
 

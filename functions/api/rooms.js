@@ -1,57 +1,53 @@
-import { json } from '../../infra/room-authority.mjs';
+const manifestType = 'application/vnd.aircast.room';
+const maxBytes = 256;
+const week = 7 * 24 * 60 * 60 * 1000;
+const objectPrefix = 'aircast/room-v1/';
+
+function reply(body = null, status = 200) {
+  return new Response(body, { status, headers: { 'Content-Type': manifestType, 'Cache-Control': 'no-store' } });
+}
+
+function expiry(manifest) {
+  const match = /^(?:0\.([1-9]\d{12})|1\.(0|[1-9]\d{12})\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{151})$/.exec(manifest);
+  return match ? Number(match[1] ?? match[2]) : null;
+}
+
+async function readManifest(request) {
+  const reader = request.body?.getReader();
+  if (!reader) return '';
+  const bytes = new Uint8Array(maxBytes);
+  let size = 0;
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return new TextDecoder().decode(bytes.subarray(0, size));
+    if (size + value.byteLength > maxBytes) { await reader.cancel(); return ''; }
+    bytes.set(value, size);
+    size += value.byteLength;
+  }
+}
 
 export async function onRequest({ request, env }) {
-  if (!env.ROOMS) return json({ error: 'Passwords and expiration require the Cloudflare ROOMS binding.', code: 'ROOMS_UNAVAILABLE' }, 503);
-  if (request.method !== 'POST') return json({ error: 'Use POST.' }, 405);
-  if (request.headers.get('Origin') !== new URL(request.url).origin) return json({ error: 'Use the AirCast site to access private rooms.' }, 403);
-  const limit = 8192;
-  const reader = request.body?.getReader();
-  if (!reader) return json({ error: 'A request body is required.' }, 400);
-  let body = '';
-  let size = 0;
-  const decoder = new TextDecoder();
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > limit) {
-      await reader.cancel();
-      return json({ error: 'Request too large.' }, 413);
-    }
-    body += decoder.decode(value, { stream: true });
+  const bucket = env.ROOM_ENVELOPES;
+  if (!bucket) return reply(null, 501);
+  const url = new URL(request.url);
+  const room = url.searchParams.get('room');
+  if (!room || !/^[A-Z2-9]{16}$/.test(room)) return reply(null, 400);
+  const key = objectPrefix + room;
+  if (request.method === 'GET') {
+    const object = await bucket.get(key);
+    if (!object) return reply(null, 404);
+    const manifest = await object.text();
+    const until = expiry(manifest);
+    if (until === null) return reply(null, 500);
+    if (until && until <= Date.now()) return reply(null, 410);
+    return reply(manifest);
   }
-  let data;
-  try { data = JSON.parse(body + decoder.decode()); } catch { return json({ error: 'Invalid JSON.' }, 400); }
-  if (!data || typeof data !== 'object' || !['create','info','enter','verify','invite','list','revoke','alive','leave','turn'].includes(data.op)) return json({ error: 'Invalid room operation.' }, 400);
-  const send = (name, payload) => env.ROOMS.get(env.ROOMS.idFromName(name)).fetch('https://room.internal/', { method: 'POST', body: JSON.stringify(payload) });
-  if (data.op === 'create' || data.op === 'enter') {
-    const ip = request.headers.get('CF-Connecting-IP') || 'local';
-    const limited = await send('rate:' + ip, { op: 'rate', burst: data.op === 'enter' });
-    if (!limited.ok) return limited;
-    if (data.op === 'enter' && data.password && !data.secret && /^[A-F0-9]{16}$/.test(data.room)) {
-      const attempt = await send('rate:' + ip + ':' + data.room, { op: 'rate', password: true });
-      if (!attempt.ok) return attempt;
-    }
-  }
-  if (data.op === 'create') {
-    data.room = Array.from(crypto.getRandomValues(new Uint8Array(8)), (byte) => byte.toString(16).padStart(2, '0')).join('').toUpperCase();
-  }
-  if (typeof data.room !== 'string' || !/^[A-F0-9]{16}$/.test(data.room)) return json({ error: 'Invalid private room ID.' }, 400);
-  if (data.op === 'turn') {
-    if (!env.TURN_KEY_ID || !env.TURN_KEY_API_TOKEN) return json({ error: 'Managed TURN is not configured.' }, 404);
-    const permit = await send('room:' + data.room, { ...data, op: 'turn-permit' });
-    if (!permit.ok) return permit;
-    const url = 'https://rtc.live.cloudflare.com/v1/turn/keys/' + encodeURIComponent(env.TURN_KEY_ID) + '/credentials/generate-ice-servers';
-    try {
-      const ttl = 86400;
-      const result = await fetch(url, { method: 'POST', signal: AbortSignal.timeout(3500), headers: {
-        Authorization: 'Bearer ' + env.TURN_KEY_API_TOKEN, 'Content-Type': 'application/json'
-      }, body: JSON.stringify({ ttl }) });
-      if (!result.ok) return json({ error: 'The TURN provider could not issue credentials.' }, 502);
-      const { iceServers } = await result.json();
-      if (!Array.isArray(iceServers)) return json({ error: 'The TURN provider returned an invalid configuration.' }, 502);
-      return json({ iceServers, ttl });
-    } catch { return json({ error: 'The TURN provider is unavailable.' }, 502); }
-  }
-  return send('room:' + data.room, data);
+  if (request.method !== 'POST') return reply(null, 405);
+  if (request.headers.get('Origin') !== url.origin) return reply(null, 403);
+  const manifest = await readManifest(request);
+  const until = expiry(manifest);
+  const now = Date.now();
+  if (until === null || (until && (until <= now || until > now + week + 60000))) return reply(null, 400);
+  const created = await bucket.put(key, manifest, { onlyIf: { etagDoesNotMatch: '*' } });
+  return reply(null, created ? 201 : 409);
 }

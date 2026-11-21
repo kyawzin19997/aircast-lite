@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+- Added client-side room encryption and authenticated WebRTC pairing without a Durable Object.
+- Added portable encrypted links and optional R2 storage for short links, Room ID lookup, and server-enforced expiry of future downloads.
+- Matched Studio’s Program Multiview to the OBS Program source and preserved OBS camera feeds when changing columns.
+
 ## 2.1.0
 
 - Opened AirCast on a room home page. Rooms are created on demand with optional passwords and expiration.

@@ -4,25 +4,17 @@ import { resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable } from 'node:stream';
 import { onRequest } from '../functions/api/rooms.js';
-import { RoomAuthority } from '../infra/room-authority.mjs';
 
-export function inMemoryAuthority() {
-  const objects = new Map();
-  return { idFromName: (name) => name, get(name) {
-    if (!objects.has(name)) {
-      const records = new Map();
-      let pending = Promise.resolve();
-      const tx = { get: async (key) => structuredClone(records.get(key)), put: async (key, value) => records.set(key, structuredClone(value)) };
-      const storage = { transaction(callback) {
-        const result = pending.then(() => callback(tx));
-        pending = result.catch(() => {});
-        return result;
-      } };
-      const authority = new RoomAuthority({ storage });
-      objects.set(name, { fetch: (url, init) => authority.fetch(new Request(url, init)) });
+export function inMemoryBucket() {
+  const records = new Map();
+  return {
+    async get(key) { return records.has(key) ? { text: async () => records.get(key) } : null; },
+    async put(key, value, options) {
+      if (options?.onlyIf?.etagDoesNotMatch === '*' && records.has(key)) return null;
+      records.set(key, value);
+      return {};
     }
-    return objects.get(name);
-  } };
+  };
 }
 
 const publicRoot = fileURLToPath(new URL('../public/', import.meta.url));
@@ -32,7 +24,7 @@ const port = Number(process.env.AIRCAST_TEST_PORT || 4173);
 const origin = 'http://127.0.0.1:' + port;
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const env = { ROOMS: process.argv.includes('--static') ? null : inMemoryAuthority() };
+  const env = { ROOM_ENVELOPES: process.argv.includes('--static') ? null : inMemoryBucket() };
   createServer(async (request, response) => {
     try {
       const url = new URL(request.url, origin);

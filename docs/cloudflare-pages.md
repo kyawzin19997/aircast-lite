@@ -40,25 +40,21 @@ cd aircast-lite
 
 After editing the app, run the local smoke test described in the [README](../README.md#local-development), commit the changed files, and push `main`.
 
-## Enable passwords and expiration
+## Optional encrypted room storage
 
-The public workflow runs without bindings. Passwords and room expiration use the room authority. Deploy it from the cloned repository root:
+Encrypted rooms work on HTTPS without any Cloudflare binding. In this setup, the full link or QR carries an encrypted room manifest in its URL fragment. Share the room password separately. The Room ID alone cannot look up a portable encrypted room.
 
-```sh
-npx wrangler@4.166.0 deploy --config infra/wrangler.toml
-```
+To enable short links and Room ID lookup, create a private R2 bucket. In the Pages application, add an **R2 bucket** binding named `ROOM_ENVELOPES` for the desired environment and redeploy Pages. Keep public bucket access disabled. Only the `/api/rooms` Pages Function uses this binding. It accepts encrypted room manifests and public expiration records. The binding has no role in key derivation or decryption. [Cloudflare Pages R2 bindings](https://developers.cloudflare.com/pages/functions/bindings/#r2-buckets)
 
-In the Pages project settings, add a **Durable Object namespace** binding named `ROOMS` for the `RoomAuthority` class in the `aircast-room-authority` Worker. Add it to each production or preview environment that should allow private rooms, then redeploy Pages. Only `/api/rooms` invokes the Pages Function. [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/get-started/) · [Pages bindings](https://developers.cloudflare.com/pages/functions/bindings/)
+AirCast clients close connections when an optional expiry passes. With R2, the API also rejects future fetches of the expired room. Previously downloaded ciphertext and portable links can still be decrypted by someone who knows the password. The bucket retains the encrypted records according to its retention policy.
 
-From AirCast home, choose **Create room**, then optionally set a password and an expiration before selecting **Start Studio**. Expiration defaults to **Never**. Once a room expires, camera and Program connections end and room entry closes. Keep the Studio tab open while the Program output is in use.
+The previous Durable Object binding can be removed from the Pages configuration after deployment. Recreate rooms that used the old private invitations and copy fresh links. Existing public OBS links remain compatible. Room encryption and API authorization are separate. Apply deployment-level limits to the room API if you expose the R2-backed write endpoint publicly.
 
 ![AirCast home page showing the room creation and join forms](images/room-home.png)
 
 ### Configure an optional TURN relay
 
-To use Cloudflare Realtime TURN with private rooms, create a TURN key and add its ID and API token as Pages secrets named `TURN_KEY_ID` and `TURN_KEY_API_TOKEN`. Redeploy after setting them. AirCast exchanges authenticated room sessions for expiring ICE credentials. The API token stays on the server. [Cloudflare TURN credential generation](https://developers.cloudflare.com/realtime/turn/generate-credentials/)
-
-For another TURN provider or a public-room deployment, configure a same-origin endpoint through `aircast-ice-endpoint` that returns the documented `iceServers` JSON response. Restrict access to the endpoint and keep long-lived provider credentials on the server. Test from a different network and check that diagnostics reports **Relayed** when a relay is needed.
+Configure a same-origin endpoint through `aircast-ice-endpoint` that returns the documented `iceServers` JSON response. Authorize requests to that endpoint independently and keep long-lived provider credentials on the server. Deployments previously using the room authority to issue TURN credentials need to move that integration to this endpoint. Test from a different network and check that diagnostics reports **Relayed**. [Cloudflare TURN credential generation](https://developers.cloudflare.com/realtime/turn/generate-credentials/)
 
 ## Troubleshooting
 

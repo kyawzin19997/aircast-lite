@@ -2,9 +2,9 @@
 
 const scope = new URL(self.registration.scope);
 const cacheFamily = 'aircast-lite-shell:' + scope.pathname + ':';
-const cacheName = cacheFamily + 'v22';
+const cacheName = cacheFamily + 'v23';
 const app = new URL('index.html', scope).href;
-const assets = ['aircast-rooms.js', 'aircast-diagnostics.js', 'aircast-qr.min.js', 'aircast-core.js', 'aircast-studio.js',
+const assets = ['aircast-rooms.js', 'aircast-sealed.js', 'aircast-diagnostics.js', 'aircast-qr.min.js', 'aircast-core.js', 'aircast-studio.js',
   'aircast-phone.js', 'aircast-output.js', 'aircast-app.js', 'aircast.css', 'aircast.webmanifest', 'aircast-icon-192.png', 'aircast-icon-512.png', 'aircast-peer.min.js']
   .map((name) => new URL(name, scope).href);
 
