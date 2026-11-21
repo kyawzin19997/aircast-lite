@@ -421,6 +421,7 @@ function studio() {
 
   function startRoom() {
     $('roomCode').textContent = room;
+    $('roomCode').title = room;
     $('roomButton').title = roomAccess ? 'Encrypted room' : 'Public room';
     signaler = new Signaler(endpoint(room), (message, tone) => {
       setSignal($('studioSignal'), message, tone);

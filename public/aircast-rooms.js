@@ -1,7 +1,7 @@
 'use strict';
 
 const AirCastRooms = (() => {
-  const room = (value) => typeof value === 'string' && /^[A-Z0-9]{3,16}$/i.test(value) ? value.toUpperCase() : '';
+  const room = (value) => typeof value === 'string' && /^[A-Z0-9]{3,16}(?:-[A-Z2-9]{16})?$/i.test(value) ? value.toUpperCase() : '';
   const slot = (value) => typeof value === 'string' && /^CAM(?:[1-9]|1\d|2[0-4])$/i.test(value) ? value.toUpperCase() : '';
 
   function output(query) {

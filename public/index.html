@@ -60,7 +60,8 @@
     <h1 id="joinTitle">Camera rooms</h1>
     <button class="btn accent" id="createRoom" type="button" aria-expanded="false" aria-controls="createRoomForm">Create room</button>
     <form id="createRoomForm" hidden>
-      <label class="field">Room password (optional)<input type="password" id="createPassword" minlength="12" maxlength="128" autocomplete="new-password" placeholder="12 characters minimum"></label>
+      <label class="field">Room ID (optional)<input id="createRoomId" type="text" minlength="3" maxlength="16" pattern="[A-Za-z0-9]{3,16}" title="Use 3–16 letters or numbers." placeholder="Generate automatically" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+      <label class="field">Room password (optional)<input type="password" id="createPassword" minlength="4" maxlength="128" autocomplete="new-password" placeholder="4 characters minimum"></label>
       <label class="field">Room expiration<select id="roomExpiry"><option value="0">No expiration</option><option value="1">1 hour</option><option value="4">4 hours</option><option value="12">12 hours</option><option value="24">24 hours</option><option value="168">7 days</option></select></label>
       <button class="btn accent" type="submit">Start Studio</button>
     </form>
@@ -86,13 +87,14 @@
     <div class="brand"><span class="brand-mark" data-icon="brand"></span><span>AirCast <em>Lite</em></span></div>
     <div class="group">
       <span class="signal hide-small" id="studioSignal" role="status"><span class="dot"></span><span>Connecting</span></span>
-      <a class="btn ghost plain room-btn" id="roomButton" href="./index.html" title="Leave Studio and return to room home"><span class="room-word">Room</span><span class="mono" id="roomCode"></span></a>
+      <a class="btn ghost plain room-btn" id="roomButton" href="./index.html" title="Leave Studio and return to room home"><span class="room-word">Room</span><span class="mono truncate" id="roomCode"></span></a>
       <button class="btn ghost plain" id="setupButton" aria-label="OBS setup"><span data-icon="help"></span><span>OBS setup</span></button>
     </div>
   </div></header>
   <main class="workspace">
     <div class="spread workspace-heading">
       <div><h1>Camera studio</h1><p>Switch live cameras in Program or send individual feeds to OBS.</p></div>
+      <div class="room-expiry" id="roomExpiryStatus" hidden><span>Room expires in</span><time id="roomCountdown" class="mono" role="timer"></time></div>
     </div>
     <div class="studio-grid">
       <div class="stack">
@@ -317,7 +319,7 @@
         <span class="signal" id="phoneConnectionStatus" role="status"><span class="dot"></span><span>Unpaired</span></span>
       </div>
       <div class="phone-capture-settings">
-        <label class="field">Room ID<input id="phoneRoom" class="mono" type="text" enterkeyhint="go" required minlength="3" maxlength="16" pattern="[A-Za-z0-9]{3,16}" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+        <label class="field">Room ID<input id="phoneRoom" class="mono" type="text" enterkeyhint="go" required minlength="3" maxlength="33" pattern="[A-Za-z0-9]{3,16}(?:-[A-Za-z2-9]{16})?" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
         <label class="field">Camera<select id="phoneSlot"></select></label>
       </div>
       <p class="small muted" id="phoneConnectionHint" role="status" hidden></p>

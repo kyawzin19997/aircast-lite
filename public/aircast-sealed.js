@@ -35,7 +35,7 @@ const AirCastSealed = (() => {
 
   async function create(room, password, expires) {
     requireCrypto();
-    if (password.length < 12 || password.length > 128) throw new Error('Use 12–128 characters for the room password.');
+    if (password.length < 4 || password.length > 128) throw new Error('Use 4–128 characters for the room password.');
     const salt = random(16);
     const key = await derive(password, salt);
     const host = await crypto.subtle.generateKey(ellipticCurve, true, ['sign', 'verify']);
@@ -300,6 +300,7 @@ const AirCastSealed = (() => {
     url.searchParams.set('room', room);
     const response = await fetch(url, { method, body: envelope, cache: 'no-store', redirect: 'error', signal: AbortSignal.timeout(3500) });
     if ([404, 405, 501].includes(response.status)) return null;
+    if (response.status === 409) throw error('This Room ID is already in use. Choose another ID.', 'ROOM_TAKEN');
     if (response.status === 410) throw error('This room has expired.', 'ROOM_EXPIRED');
     if (!response.ok) throw new Error('Encrypted room storage is temporarily unavailable.');
     if (method === 'POST') return response.status === 201;

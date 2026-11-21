@@ -11,6 +11,10 @@ if (view !== 'output') {
     navigator.serviceWorker.register('./aircast-sw.js').catch(() => {});
   }
 }
+
+const ownerKey = (room) => 'aircast-owner:' + room;
+const aliasKey = (room) => 'aircast-custom-id:' + room;
+
 function joinRoom() {
   const code = normalizeRoom(query.get('join'));
   if (code) $('joinValue').value = code;
@@ -25,25 +29,38 @@ function joinRoom() {
     event.preventDefault();
     let password = $('createPassword').value;
     $('createPassword').value = '';
+    const requested = normalizeRoom($('createRoomId').value.trim());
     const hours = Number($('roomExpiry').value);
     const destination = new URL(location.protocol === 'file:' ? './index.html' : './', location.href);
-    const room = randomCode(16);
     const expires = hours ? Date.now() + hours * 3600000 : 0;
-    destination.searchParams.set('room', room);
+    const namespace = randomCode(16);
+    let room = requested || randomCode(16);
     event.submitter.disabled = true;
     $('joinFeedback').textContent = '';
     try {
+      const alias = requested && saved(aliasKey(requested));
+      if (alias?.room && (!alias.expires || alias.expires > Date.now())) throw new Error('This Room ID is already in use. Choose another ID.');
       if (password) {
-        const { envelope, recovery, access } = await AirCastSealed.create(room, password, expires);
+        let protectedSetup = await AirCastSealed.create(room, password, expires);
+        const stored = await AirCastSealed.request('POST', room, protectedSetup.envelope);
+        if (!stored) {
+          room = (requested || 'ROOM') + '-' + namespace;
+          protectedSetup = await AirCastSealed.create(room, password, expires);
+        }
         password = '';
-        const stored = await AirCastSealed.request('POST', room, envelope);
+        const { envelope, recovery, access } = protectedSetup;
         roomManifest = { room, envelope, stored, expires };
         roomAccess = { ...access, role: 'host', slot: '' };
         store(AirCastSealed.recoveryKey(room), recovery);
-      } else if (expires) {
-        await AirCastSealed.request('POST', room, '0.' + expires);
-        roomManifest = { room, expires };
+      } else {
+        const stored = await AirCastSealed.request('POST', room, '2.' + expires + '.' + namespace);
+        if (!stored) room = (requested || 'ROOM') + '-' + namespace;
+        roomManifest = { room, expires, openNamespace: namespace };
       }
+      store(ownerKey(room), true);
+      if (requested) store(aliasKey(requested), { room, expires });
+      destination.searchParams.set('room', room);
+      destination.searchParams.set('owner', '1');
       history.replaceState(null, '', roomLink(destination, room));
       query.set('room', room);
       showRoom('studio');
@@ -84,23 +101,41 @@ function showEntryError(error, retry) {
 }
 
 async function findRoom(room, address, required = false) {
-  if (!/^[A-Z2-9]{16}$/.test(room)) return null;
+  if (!room) return null;
   const envelope = new URLSearchParams(address.hash.slice(1)).get('room');
   if (envelope !== null) return { room, envelope, stored: false };
-  if (address.searchParams.has('until') && !required) {
-    const expires = Number(address.searchParams.get('until'));
-    if (/^[1-9]\d{12}$/.test(String(expires))) return { room, expires };
-  }
-  const record = await AirCastSealed.request('GET', room);
+  const openNamespace = room.split('-')[1];
+  const record = openNamespace || !navigator.onLine ? null : await AirCastSealed.request('GET', room);
   if (record?.startsWith('1.')) return { room, envelope: record, stored: true };
   if (record?.startsWith('0.')) return { room, expires: Number(record.slice(2)) };
+  if (record?.startsWith('2.')) {
+    const [, expires, namespace] = record.split('.');
+    return { room, expires: Number(expires), openNamespace: namespace };
+  }
   if (required) throw new Error('The encrypted room data is missing. Open the full room link or scan the QR again.');
+  if (address.searchParams.get('open') === '1' && !openNamespace) throw new Error('This Room ID is unavailable.');
+  const until = address.searchParams.get('until');
+  const expires = /^[1-9]\d{12}$/.test(until) ? Number(until) : 0;
+  if (expires || openNamespace) return { room, expires, openNamespace };
   return null;
+}
+
+function showCountdown(expires) {
+  $('roomExpiryStatus').hidden = false;
+  const update = () => {
+    const remaining = Math.max(0, Math.ceil((expires - Date.now()) / 1000));
+    const clock = [Math.floor(remaining / 3600), Math.floor(remaining / 60) % 60, remaining % 60];
+    $('roomCountdown').textContent = clock.map((value) => String(value).padStart(2, '0')).join(':');
+  };
+  update();
+  const timer = setInterval(update, 1000);
+  window.addEventListener('pagehide', () => clearInterval(timer), { once: true });
 }
 
 function showRoom(route) {
   if (roomManifest?.expires) {
     AirCastSealed.checkExpiry(roomManifest.expires);
+    if (route === 'studio') showCountdown(roomManifest.expires);
     setTimeout(() => location.reload(), Math.max(0, roomManifest.expires - Date.now() + 100));
   }
   document.documentElement.dataset.view = route;
@@ -125,7 +160,13 @@ async function boot(password) {
       try { inherited = window.parent.aircastProgramRoom?.(target.room); } catch { /* A cross-origin parent cannot unlock a room. */ }
     }
     if (inherited?.manifest.stored && !location.hash) roomManifest = inherited.manifest;
-    if (sealed || query.has('until')) roomManifest ||= await findRoom(target.room, new URL(location.href), sealed);
+    if (sealed || view === 'studio' || query.has('open') || query.has('until') || target.room.includes('-')) {
+      roomManifest ||= await findRoom(target.room, new URL(location.href), sealed);
+    }
+    if (view === 'studio' && !sealed && (roomManifest?.envelope ||
+        ((roomManifest?.openNamespace || query.has('owner')) && saved(ownerKey(target.room)) !== true))) {
+      throw new Error('Studio is available in the browser that created this room. Use a camera pairing link or the Program viewer link to join.');
+    }
     if (sealed) {
       if (!roomManifest?.envelope) throw new Error('The encrypted room data is missing.');
       if (view === 'output') {

@@ -117,6 +117,7 @@ function makeUrl(room, view, slot, muted = false) {
 function roomLink(address, room, manifest = roomManifest) {
   if (manifest?.room !== room) return address.href;
   if (manifest.envelope !== undefined) return AirCastSealed.link(address, manifest.envelope, manifest.stored);
+  if (manifest.openNamespace && !room.includes('-')) address.searchParams.set('open', '1');
   if (manifest.expires) address.searchParams.set('until', manifest.expires);
   return address.href;
 }
@@ -126,11 +127,19 @@ function obsLink(address, slot) {
 }
 
 function endpoint(room) {
-  return roomAccess ? 'AIRCAST-SEALED-HUB-' + roomAccess.namespace : AirCastRooms.endpoint(room, null);
+  if (roomAccess) return 'AIRCAST-SEALED-HUB-' + roomAccess.namespace;
+  const namespace = openNamespace(room);
+  return namespace ? 'AIRCAST-OPEN-HUB-' + namespace : AirCastRooms.endpoint(room, null);
 }
 
 function cameraEndpoint(room, slot) {
-  return roomAccess ? 'AIRCAST-SEALED-CAM-' + roomAccess.namespace + '-' + slot : AirCastRooms.endpoint(room, slot);
+  if (roomAccess) return 'AIRCAST-SEALED-CAM-' + roomAccess.namespace + '-' + slot;
+  const namespace = openNamespace(room);
+  return namespace ? 'AIRCAST-OPEN-CAM-' + namespace + '-' + slot : AirCastRooms.endpoint(room, slot);
+}
+
+function openNamespace(room) {
+  return (roomManifest?.room === room ? roomManifest.openNamespace : '') || room.split('-')[1];
 }
 
 const incomingCaps = new WeakMap();

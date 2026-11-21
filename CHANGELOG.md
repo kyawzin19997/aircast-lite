@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.2
+
+- Added custom Room IDs, duplicate registration checks, and a creator-browser check for new Studio URLs.
+- Added a live countdown for expiring rooms and accepted passwords with a four-character minimum.
+- Kept Camera Setup the same size across the Phone, USB camera, and MJPEG tabs.
+
 ## 2.2.1
 
 - Restored the pairing QR on protected OBS feeds. Camera contributors enter the room password on their phones.

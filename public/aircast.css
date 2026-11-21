@@ -394,7 +394,14 @@ html[data-keyboard][data-view=phone] #phoneDialog[open] {
 #programImageControls :is(.control-row, .control-details) { grid-column: 1 / -1; }
 #programImageControls .control-row .btn { flex: 0 1 auto; }
 #programImageControls .adjustment { margin: 0; }
-#sourceDialog[data-source=usb] { width: min(680px, calc(100% - 24px)); }
+#sourceDialog { width: min(680px, calc(100% - 24px)); height: min(670px, calc(100dvh - 28px)); overflow: hidden; }
+#sourceDialog[open] { display: flex; flex-direction: column; }
+#sourceDialog > .modal-head { flex: none; }
+#sourceDialog > .modal-body { flex: 1; min-height: 0; overflow: auto; align-content: start; }
+#createRoomId { text-transform: uppercase; }
+#roomCode { max-width: min(33ch, 38vw); }
+.room-expiry { display: grid; gap: 3px; flex: none; text-align: right; font-size: .8rem; color: var(--quiet); }
+.room-expiry time { color: var(--text); font-variant-numeric: tabular-nums; }
 .usb-framing { display: grid; gap: 12px; padding-top: 13px; border-top: 1px solid var(--line); }
 .usb-framing-grid { display: grid; grid-template-columns: minmax(0, 1.12fr) minmax(0, 1fr); gap: 13px; align-items: start; }
 .usb-framing-preview { display: grid; gap: 7px; margin: 0; }

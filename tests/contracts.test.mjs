@@ -134,3 +134,14 @@ test('R2 accepts only encrypted manifests or public expiry metadata, with immuta
   assert.equal((await send('GET')).status, 410);
   await assert.rejects(sealed.unlock(room, envelope, 'private broadcast passphrase'), { code: 'ROOM_EXPIRED' });
 });
+
+test('R2 reserves an exact custom ID for an open room without expiry', async () => {
+  const origin = 'https://aircast.test';
+  const env = { ROOM_ENVELOPES: inMemoryBucket() };
+  const address = origin + '/api/rooms?room=STAGE1';
+  const send = (method, body) => onRequest({ env, request: new Request(address, { method, body, headers: { Origin: origin } }) });
+  const record = '2.0.AIRCASTROOM22222';
+  assert.equal((await send('POST', record)).status, 201);
+  assert.equal((await send('POST', '2.0.AIRCASTROOM33333')).status, 409);
+  assert.equal(await (await send('GET')).text(), record);
+});

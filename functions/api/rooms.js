@@ -8,8 +8,8 @@ function reply(body = null, status = 200) {
 }
 
 function expiry(manifest) {
-  const match = /^(?:0\.([1-9]\d{12})|1\.(0|[1-9]\d{12})\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{151})$/.exec(manifest);
-  return match ? Number(match[1] ?? match[2]) : null;
+  const match = /^(?:0\.([1-9]\d{12})|1\.(0|[1-9]\d{12})\.[A-Za-z0-9_-]{22}\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{151}|2\.(0|[1-9]\d{12})\.[A-Z2-9]{16})$/.exec(manifest);
+  return match ? Number(match[1] ?? match[2] ?? match[3]) : null;
 }
 
 async function readManifest(request) {
@@ -31,7 +31,7 @@ export async function onRequest({ request, env }) {
   if (!bucket) return reply(null, 501);
   const url = new URL(request.url);
   const room = url.searchParams.get('room');
-  if (!room || !/^[A-Z2-9]{16}$/.test(room)) return reply(null, 400);
+  if (!room || !/^[A-Z0-9]{3,16}$/.test(room)) return reply(null, 400);
   const key = objectPrefix + room;
   if (request.method === 'GET') {
     const object = await bucket.get(key);

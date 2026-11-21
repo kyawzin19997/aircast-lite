@@ -6,7 +6,7 @@ Turn a phone, USB webcam, or MJPEG camera into an OBS Browser Source. Use a came
 
 ## Rooms and OBS outputs
 
-Select **Create room** on the home page. Choose a password and an expiration if you need them, then select **Start Studio** to generate the Room ID. To join an existing room, enter its ID or pairing link and choose **Camera contributor** or **Program viewer**. Contributors pick a slot before joining. Each room keeps separate Studio settings.
+Select **Create room** on the home page. Enter a custom Room ID of 3–16 letters or numbers, or leave it blank to generate one. The optional expiration appears as a live countdown in Studio. To invite someone, share a camera pairing link or the copied Program link. New Studio URLs open in the browser that created the room.
 
 ![AirCast home page with optional room password and expiration settings](docs/images/room-home.png)
 
@@ -16,9 +16,9 @@ Open **Outputs** for Browser Source dimensions, individual camera links, and cle
 
 ![AirCast Output Manager showing Program Browser Source settings](docs/images/output-manager.png)
 
-A password of at least 12 characters encrypts the room in the browser. Paste the copied OBS link into a **Browser** source. It shows the pairing QR while waiting for the camera. The contributor scans the QR, enters the password on their phone, enables the camera, and taps **Go live**. Share the password separately with camera contributors. Encrypted Program viewers open the copied Program link. Copy fresh encrypted OBS links created before v2.2.1.
+A password of at least four characters encrypts the room in the browser. Use a longer passphrase when room access matters. Paste the copied OBS link into a **Browser** source. It shows the pairing QR while waiting for the camera. The contributor scans the QR, enters the password on their phone, enables the camera, and taps **Go live**. Share the password separately with camera contributors. Encrypted Program viewers open the copied Program link. Copy fresh encrypted OBS links created before v2.2.1.
 
-Encrypted links work on static HTTPS hosting. The optional Cloudflare R2 setup enables shorter links, joining encrypted rooms by Room ID, and server-side expiry of future downloads. AirCast also closes expired room connections in its clients. [Cloudflare storage and expiry](docs/cloudflare-pages.md#optional-encrypted-room-storage)
+Encrypted links work on static HTTPS hosting. AirCast appends a unique suffix to Room IDs when storage is unavailable. Optional Cloudflare R2 reserves the exact Room ID, supports shorter links, and enforces expiry for future downloads. AirCast also closes expired room connections in its clients. [Cloudflare storage and expiry](docs/cloudflare-pages.md#optional-encrypted-room-storage)
 
 ![AirCast Studio showing the live Program monitor, Multiview, and the Program framing controls](docs/images/studio.png)
 

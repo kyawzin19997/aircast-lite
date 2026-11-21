@@ -124,7 +124,7 @@ test('stored encrypted rooms ask the phone for a password while OBS displays and
   context.on('request', (request) => { if (new URL(request.url()).pathname.endsWith('/api/rooms')) requests.push(request); });
   await studio.goto('/');
   await studio.locator('#createRoom').click();
-  await studio.locator('#createPassword').fill('camera-passphrase');
+  await studio.locator('#createPassword').fill('a4BC');
   await studio.locator('#roomExpiry').selectOption('1');
   await studio.locator('#createRoomForm [type=submit]').click();
   await expect(studio).toHaveURL(/sealed=1$/);
@@ -134,7 +134,7 @@ test('stored encrypted rooms ask the phone for a password while OBS displays and
   await expect(field).toHaveValue(/mode=sender/);
   const cameraUrl = await field.inputValue();
   expect(new URL(cameraUrl).searchParams.get('cam')).toBe('CAM1');
-  expect(cameraUrl).not.toMatch(/camera-pass|ticket=/);
+  expect(cameraUrl).not.toMatch(/a4BC|ticket=/);
   await studio.locator('#sourceDialog [data-close]').click();
   const obs = await context.newPage();
   await obs.goto(await copiedObsUrl(studio));
@@ -146,7 +146,7 @@ test('stored encrypted rooms ask the phone for a password while OBS displays and
   await expect(direct.locator('#outputPair')).toBeVisible();
   await expect(direct.locator('#outputPairCamera')).toHaveText('CAM 1');
   await expect(direct.locator('#joinPassword')).toBeHidden();
-  const unlock = async (page, password = 'camera-passphrase') => {
+  const unlock = async (page, password = 'a4BC') => {
     await page.locator('#joinPassword').fill(password);
     await page.locator('#roomPasswordForm [type=submit]').click();
   };
@@ -176,7 +176,7 @@ test('stored encrypted rooms ask the phone for a password while OBS displays and
   const posts = requests.filter((request) => request.method() === 'POST');
   expect(posts).toHaveLength(1);
   expect(posts[0].postData()).toMatch(/^1\.\d+\.[\w-]+\.[\w-]+\.[\w-]+$/);
-  expect(posts[0].postData()).not.toContain('camera-passphrase');
+  expect(posts[0].postData()).not.toContain('a4BC');
 });
 
 test('portable encrypted links work without storage and reload requests the password', async ({ context }) => {
@@ -251,6 +251,75 @@ test('the protected direct OBS QR contains only the phone join link', async ({ c
   await phone.locator('#joinPassword').fill('an encrypted camera room');
   await phone.locator('#roomPasswordForm [type=submit]').click();
   await expect(phone.locator('#phoneDestination')).toHaveText('CAM 2');
+});
+
+test('custom IDs reserve one URL, hide Studio from guests, and show the live countdown', async ({ context, browser }) => {
+  const id = code();
+  const studio = await context.newPage();
+  await studio.goto('/');
+  await studio.locator('#createRoom').click();
+  await studio.locator('#createRoomId').fill(id.toLowerCase());
+  await studio.locator('#roomExpiry').selectOption('1');
+  await studio.locator('#createRoomForm [type=submit]').click();
+  await expect(studio.locator('#roomCode')).toHaveText(id);
+  const countdown = studio.locator('#roomCountdown');
+  await expect(countdown).toHaveText(/^\d{2}:\d{2}:\d{2}$/);
+  const shown = await countdown.textContent();
+  await expect(countdown).not.toHaveText(shown);
+  const guest = await browser.newContext({ baseURL: new URL(studio.url()).origin });
+  try {
+    const page = await guest.newPage();
+    await page.goto(studio.url());
+    await expect(page.locator('#joinFeedback')).toContainText('browser that created this room');
+    await expect(page.locator('#studio')).toBeHidden();
+    await page.goto('/?room=' + id);
+    await expect(page.locator('#studio')).toBeHidden();
+    await expect(page.locator('#joinFeedback')).toContainText('browser that created this room');
+    await page.goto('/');
+    await page.locator('#createRoom').click();
+    await page.locator('#createRoomId').fill(id);
+    await page.locator('#createRoomForm [type=submit]').click();
+    await expect(page.locator('#joinFeedback')).toContainText('Room ID is already in use');
+    await expect(page.locator('#createRoomId')).toHaveValue(id);
+  } finally { await guest.close(); }
+
+  await studio.locator('#quickPair').click();
+  const cameraUrl = await studio.locator('#pairURL').inputValue();
+  const phone = await context.newPage();
+  await phone.goto(cameraUrl);
+  await expect(phone.locator('#phoneDestination')).toHaveText('CAM 1');
+  const dialog = studio.locator('#sourceDialog');
+  for (const viewport of [{ width: 980, height: 750 }, { width: 390, height: 620 }]) {
+    await studio.setViewportSize(viewport);
+    const initial = await dialog.boundingBox();
+    for (const tab of ['USB camera', 'MJPEG', 'Phone']) {
+      await studio.getByRole('button', { name: tab, exact: true }).click();
+      const bounds = await dialog.boundingBox();
+      expect(bounds.width).toBe(initial.width);
+      expect(bounds.height).toBe(initial.height);
+    }
+  }
+});
+
+test('custom IDs stay unique without room storage', async ({ context }) => {
+  await context.route('**/api/rooms?*', (route) => route.fulfill({ status: 501 }));
+  const studio = await context.newPage();
+  await studio.goto('/');
+  await studio.locator('#createRoom').click();
+  await studio.locator('#createRoomId').fill('TESTSTAGE');
+  await studio.locator('#createRoomForm [type=submit]').click();
+  await expect(studio.locator('#roomCode')).toHaveText(/^TESTSTAGE-[A-Z2-9]{16}$/);
+  const room = await studio.locator('#roomCode').textContent();
+  const obs = await context.newPage();
+  await obs.goto('/?obs=' + room + '&c=1');
+  const phone = await context.newPage();
+  await startCamera(phone, room, 'CAM1');
+  await expect(obs.locator(video)).toBeVisible({ timeout: 15000 });
+  await studio.goto('/');
+  await studio.locator('#createRoom').click();
+  await studio.locator('#createRoomId').fill('teststage');
+  await studio.locator('#createRoomForm [type=submit]').click();
+  await expect(studio.locator('#joinFeedback')).toContainText('Room ID is already in use');
 });
 
 test('PWA retains the whole app shell after going offline', async ({ context }) => {

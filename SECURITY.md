@@ -10,4 +10,6 @@ Camera contributors prove room membership before exchanging media descriptions o
 
 Encryption protects the room manifest. It does not grant server-side authorization or prevent arbitrary API requests, signaling disruption, administrative resource deletion, or access to public metadata such as a room locator or expiry. The optional storage endpoint has no overwrite or delete action. With storage, the server refuses future reads after expiry. A person who saved ciphertext and knows the password can still decrypt it independently. Connected participants can also record the streams they receive.
 
+AirCast's Studio UI limits newly created open rooms to the creator’s browser. Open rooms still use public media links. Password-protected rooms use a separate cryptographic Studio credential.
+
 The browser requests camera and microphone access when the operator enables them. Closing or leaving the phone page releases capture. AirCast does not store camera recordings on the server. WebRTC connections may use a TURN relay. Any local clip recording is stored by the operator’s browser.
